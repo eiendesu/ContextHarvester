@@ -142,6 +142,9 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
+# Release build output (local test)
+_release-test/
+
 # Context Harvester runtime
 python/.venv/
 **/.context-harvester/

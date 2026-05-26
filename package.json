@@ -1,0 +1,196 @@
+{
+  "name": "context-harvester",
+  "displayName": "Context Harvester",
+  "description": "Semantic codebase search in locale con Ollama — genera file context per feature.",
+  "version": "0.1.0",
+  "publisher": "context-harvester",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": ["Other", "Machine Learning"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "context-harvester.rebuildIndex",
+        "title": "Context Harvester: Rebuild Index",
+        "category": "Context Harvester"
+      },
+      {
+        "command": "context-harvester.generateContext",
+        "title": "Context Harvester: Genera contesto",
+        "category": "Context Harvester"
+      },
+      {
+        "command": "context-harvester.openPanel",
+        "title": "Context Harvester: Apri pannello",
+        "category": "Context Harvester"
+      },
+      {
+        "command": "context-harvester.openLastContext",
+        "title": "Context Harvester: Apri ultimo context",
+        "category": "Context Harvester"
+      },
+      {
+        "command": "context-harvester.checkOllama",
+        "title": "Context Harvester: Verifica Ollama",
+        "category": "Context Harvester"
+      },
+      {
+        "command": "context-harvester.resetIndex",
+        "title": "Context Harvester: Reset Index",
+        "category": "Context Harvester"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "context-harvester",
+          "title": "Context Harvester",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "context-harvester": [
+        {
+          "type": "webview",
+          "id": "context-harvester.panel",
+          "name": "Context Harvester"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Context Harvester",
+      "properties": {
+        "contextHarvester.repoPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path assoluto al repo. Se vuoto, usa il workspace corrente."
+        },
+        "contextHarvester.outputPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path assoluto custom per i file output."
+        },
+        "contextHarvester.fileNameTemplate": {
+          "type": "string",
+          "default": "{CARD}_context",
+          "description": "Template nome file output ({CARD} = card ID)."
+        },
+        "contextHarvester.ollamaUrl": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "URL base Ollama."
+        },
+        "contextHarvester.embeddingModel": {
+          "type": "string",
+          "default": "nomic-embed-text",
+          "description": "Modello embedding Ollama."
+        },
+        "contextHarvester.hydeModel": {
+          "type": "string",
+          "default": "qwen2.5:3b",
+          "description": "Modello HyDE query expansion."
+        },
+        "contextHarvester.rerankModel": {
+          "type": "string",
+          "default": "bge-reranker-base",
+          "description": "Modello re-ranking (fallback su hydeModel se non disponibile)."
+        },
+        "contextHarvester.includeExtensions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Whitelist estensioni (se vuota, tutto tranne blacklist)."
+        },
+        "contextHarvester.excludeExtensions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [".md", ".txt", ".json", ".lock", ".yaml", ".yml", ".png", ".jpg", ".svg", ".pdf", ".exe", ".dll", ".zip", ".nupkg"]
+        },
+        "contextHarvester.excludeFolders": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["bin", "obj", "node_modules", ".git", "dist", ".context-harvester", "packages", ".vs", "TestResults"]
+        },
+        "contextHarvester.docExtensions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [".md"]
+        },
+        "contextHarvester.topK": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1
+        },
+        "contextHarvester.topKBeforeRerank": {
+          "type": "number",
+          "default": 20,
+          "minimum": 2
+        },
+        "contextHarvester.chunkSize": {
+          "type": "number",
+          "default": 400,
+          "minimum": 50
+        },
+        "contextHarvester.chunkOverlap": {
+          "type": "number",
+          "default": 50,
+          "minimum": 0
+        },
+        "contextHarvester.multiQueryHyde": {
+          "type": "boolean",
+          "default": true
+        },
+        "contextHarvester.enableReranking": {
+          "type": "boolean",
+          "default": true
+        },
+        "contextHarvester.enableGrep": {
+          "type": "boolean",
+          "default": true
+        },
+        "contextHarvester.enableDependencyGraph": {
+          "type": "boolean",
+          "default": true
+        },
+        "contextHarvester.dependencyDepth": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0,
+          "maximum": 3
+        },
+        "contextHarvester.includeDocsInRetrieval": {
+          "type": "boolean",
+          "default": false
+        },
+        "contextHarvester.autoIndex": {
+          "type": "boolean",
+          "default": false
+        },
+        "contextHarvester.autoIndexOnSave": {
+          "type": "boolean",
+          "default": false
+        },
+        "contextHarvester.autoIndexIntervalMinutes": {
+          "type": "number",
+          "default": 60,
+          "minimum": 5
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext .ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.96.0",
+    "typescript": "^5.4.0"
+  }
+}

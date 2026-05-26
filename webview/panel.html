@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{CSP}}; script-src {{CSP}};" />
+  <link rel="stylesheet" href="{{CSS_URI}}" />
+</head>
+<body>
+  <div id="banner-ollama" class="banner banner-error hidden"></div>
+  <div id="banner-index" class="banner banner-warn hidden"></div>
+
+  <section class="section" data-section="index">
+    <header class="section-header" data-toggle="index">
+      <span>INDEX</span><span class="chevron">▲</span>
+    </header>
+    <div class="section-body" id="section-index">
+      <p id="index-status">Nessun index</p>
+      <p id="index-files"></p>
+      <label class="toggle-row">
+        <span>Auto-index</span>
+        <input type="checkbox" id="auto-index-toggle" disabled title="Configura in Settings" />
+      </label>
+      <button id="btn-rebuild" class="btn secondary">🔄 Rebuild Index</button>
+      <button id="btn-reset" class="btn ghost">Reset Index</button>
+      <div id="progress-index" class="progress hidden">
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <p id="progress-text"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" data-section="input">
+    <header class="section-header" data-toggle="input">
+      <span>FEATURE INPUT</span><span class="chevron">▲</span>
+    </header>
+    <div class="section-body" id="section-input">
+      <div class="radio-row">
+        <label><input type="radio" name="inputMode" value="manual" checked /> Scrivi a mano</label>
+        <label><input type="radio" name="inputMode" value="file" /> Seleziona file/i</label>
+      </div>
+      <div id="file-picker" class="hidden">
+        <button id="btn-pick-files" class="btn secondary">+ Aggiungi file</button>
+        <ul id="file-list"></ul>
+      </div>
+      <textarea id="feature-input" rows="6" placeholder="Descrivi la feature o incolla i requisiti..."></textarea>
+      <p class="label">SOURCES</p>
+      <div class="checkbox-row">
+        <label><input type="checkbox" id="src-code" checked disabled /> Codice</label>
+        <label><input type="checkbox" id="src-docs" /> Documentazione (.md)</label>
+      </div>
+      <p class="label">FOCUS (opzionale)</p>
+      <div class="checkbox-row">
+        <label><input type="checkbox" id="focus-backend" checked /> Backend</label>
+        <label><input type="checkbox" id="focus-frontend" checked /> Frontend</label>
+        <label><input type="checkbox" id="focus-sql" checked /> SQL</label>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" data-section="output">
+    <header class="section-header" data-toggle="output">
+      <span>OUTPUT</span><span class="chevron">▲</span>
+    </header>
+    <div class="section-body" id="section-output">
+      <label class="label" for="card-id">CARD ID</label>
+      <input type="text" id="card-id" placeholder="NED-123" />
+      <p id="file-preview" class="muted">→ context.md</p>
+      <p id="output-path" class="muted small"></p>
+    </div>
+  </section>
+
+  <button id="btn-generate" class="btn primary" disabled>🔍 Genera Contesto</button>
+
+  <div id="progress-gen" class="progress hidden">
+    <p id="progress-gen-text"><span class="spinner"></span> In corso...</p>
+  </div>
+
+  <section id="result-section" class="result hidden">
+    <p id="result-title"></p>
+    <p id="result-meta" class="muted"></p>
+    <button id="btn-open" class="btn secondary">📄 Apri in VS Code</button>
+  </section>
+
+  <script src="{{JS_URI}}"></script>
+</body>
+</html>
