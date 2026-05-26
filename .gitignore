@@ -141,3 +141,10 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Context Harvester runtime
+python/.venv/
+**/.context-harvester/
+*.pyc
+__pycache__/
+python/config_temp*.json
