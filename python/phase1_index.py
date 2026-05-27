@@ -194,6 +194,30 @@ def run(config: dict[str, Any]) -> dict[str, Any]:
             sym_index = symbol_index.build_symbol_index(config)
     else:
         sym_index = symbol_index.build_symbol_index(config)
+
+    if config.get("v2Symbols", True):
+        from symbol_index_v2 import build_symbol_index_v2
+
+        if tracker:
+            with tracker.phase("symbol_index_v2"):
+                build_symbol_index_v2(config)
+        else:
+            build_symbol_index_v2(config)
+
+    if config.get("v2ApiMatching", True):
+        from api_client_index import build_api_client_index
+        from api_matcher import build_api_links
+        from backend_route_index import build_backend_route_index
+
+        if tracker:
+            with tracker.phase("api_indexes"):
+                br = build_backend_route_index(config)
+                ac = build_api_client_index(config)
+                build_api_links(repo, ac, br)
+        else:
+            br = build_backend_route_index(config)
+            ac = build_api_client_index(config)
+            build_api_links(repo, ac, br)
     meta = {
         "lastIndexed": utc_now_iso(),
         "totalFiles": len(all_hashes),

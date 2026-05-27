@@ -87,6 +87,31 @@ main { flex: 1; min-height: 0; position: relative; }
   background: #111;
 }
 
+#sigma-container.graph-container {
+  flex: 1;
+  min-height: 320px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #111;
+}
+
+.sigma-detail-panel {
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  max-height: 180px;
+  overflow: auto;
+}
+.sigma-detail-panel.hidden {
+  display: none;
+}
+.sigma-detail-body {
+  font-size: 11px;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
 .selection-bar {
   margin-top: 6px;
   font-size: 12px;

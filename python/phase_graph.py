@@ -378,6 +378,14 @@ def run(config: dict[str, Any]) -> dict[str, Any]:
     except Exception:
         pass
 
+    if config.get("v2Symbols", True):
+        try:
+            from graph_v2 import run_graph_v2
+
+            run_graph_v2(config, file_to_group)
+        except Exception:
+            pass
+
     return {
         "communitiesCount": len(communities_raw),
         "functionalFunctionsCount": len(merged_functions),

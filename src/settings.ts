@@ -73,6 +73,10 @@ export interface HarvesterConfig {
   analysisEntryPointPatterns?: string[];
   analysisApiEdgePatterns?: string[];
 
+  v2Symbols?: boolean;
+  v2ApiMatching?: boolean;
+  sigmaViewer?: boolean;
+
   /** Dev Lab — single phase id (see python/dev_phases.py). */
   devPhase?: string;
 }
@@ -215,6 +219,9 @@ export function buildConfig(overrides: Partial<HarvesterConfig> = {}): Harvester
       'Controller', 'Program.cs', 'Startup.cs', 'Page.tsx', 'App.tsx', 'index.ts',
     ]),
     analysisApiEdgePatterns: cfg('analysis.apiEdgePatterns', ['fetch', 'axios']),
+    v2Symbols: cfg('v2Symbols', true),
+    v2ApiMatching: cfg('v2ApiMatching', true),
+    sigmaViewer: cfg('sigmaViewer', true),
     ...overrides,
   };
 }

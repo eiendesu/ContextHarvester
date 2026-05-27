@@ -105,6 +105,33 @@ name_lookup.json      — mapping classe → file
 graph_analysis.json   — cache analisi NetworkX
 ```
 
+## Layer 3b — Graph v5 (typed graph + Sigma.js)
+
+Dopo **reindex** (con `v2Symbols` / `v2ApiMatching`) e **Functional Analysis**, in `.context-harvester/`:
+
+| File | Contenuto |
+|------|-----------|
+| `symbol_index_v2.json` | nodi/edge tipizzati (file, class, method, DTO, API client) |
+| `api_client_index.json` | funzioni frontend fetch/axios |
+| `backend_route_index.json` | action ASP.NET con route normalizzate |
+| `api_links.json` | match frontend↔backend con `confidence` |
+| `graph_detail.json` | grafo fine-grained completo |
+| `graph_file.json` | vista aggregata file-level (derivata) |
+| `graph_expansion_index.json` | mappa file → nodi da espandere |
+| `impact_index.json` | upstream/downstream per impact v2 |
+
+Tab **Grafo v5** nella web app: Sigma.js (file view + click per expanded file view). API: `/api/graph/file`, `/api/graph/detail`, `/api/graph/expand`, `/api/graph/impact-v2/{id}`.
+
+Parser C# backend: regex migliorato (Roslyn pianificato). TypeScript API: regex su export + fetch/axios.
+
+### Settings v5
+
+| Setting | Default |
+|---------|---------|
+| `v2Symbols` | true |
+| `v2ApiMatching` | true |
+| `sigmaViewer` | true |
+
 ### Settings v4
 
 | Setting | Default |

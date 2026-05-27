@@ -32,7 +32,7 @@ def create_http_app(mcp_app=None) -> FastAPI:
     static_dir = webapp_dir / "static"
     templates_dir = webapp_dir / "templates"
 
-    app = FastAPI(title="Context Harvester Graph", version="0.4.0")
+    app = FastAPI(title="Context Harvester Graph", version="0.5.0")
 
     if mcp_app is not None:
         app.mount("/mcp", mcp_app)
@@ -80,6 +80,64 @@ def create_http_app(mcp_app=None) -> FastAPI:
         from graph_analyses import impact_analysis
 
         return JSONResponse(impact_analysis(_repo(), node_id, max_depth=max_depth))
+
+    @app.get("/api/graph/file")
+    async def api_graph_file():
+        p = _repo() / ".context-harvester" / "graph_file.json"
+        if not p.is_file():
+            return JSONResponse({"nodes": [], "edges": [], "error": "graph_file.json missing — run reindex + functional analysis"})
+        return JSONResponse(json.loads(p.read_text(encoding="utf-8")))
+
+    @app.get("/api/graph/detail")
+    async def api_graph_detail():
+        p = _repo() / ".context-harvester" / "graph_detail.json"
+        if not p.is_file():
+            return JSONResponse({"nodes": [], "edges": [], "error": "graph_detail.json missing"})
+        return JSONResponse(json.loads(p.read_text(encoding="utf-8")))
+
+    @app.get("/api/graph/expand")
+    async def api_graph_expand(file: str):
+        harv = _repo() / ".context-harvester"
+        exp_p = harv / "graph_expansion_index.json"
+        det_p = harv / "graph_detail.json"
+        if not exp_p.is_file() or not det_p.is_file():
+            return JSONResponse({"nodes": [], "edges": [], "error": "v5 graph artifacts missing"})
+        expansion = json.loads(exp_p.read_text(encoding="utf-8"))
+        detail = json.loads(det_p.read_text(encoding="utf-8"))
+        entry = (expansion.get("files") or {}).get(file) or {}
+        ids = set(entry.get("nodeIds") or [])
+        nodes = [n for n in (detail.get("nodes") or []) if n.get("id") in ids]
+        edges = [
+            e for e in (detail.get("edges") or [])
+            if e.get("source") in ids or e.get("target") in ids
+        ]
+        return JSONResponse({"file": file, "nodes": nodes, "edges": edges})
+
+    @app.get("/api/graph/impact-v2/{node_id:path}")
+    async def api_impact_v2(
+        node_id: str,
+        max_depth: int = 3,
+        direction: str = "downstream",
+        mode: str = "transitive",
+    ):
+        from graph_v2 import impact_analysis_v2
+
+        return JSONResponse(
+            impact_analysis_v2(
+                _repo(),
+                node_id,
+                max_depth=max_depth,
+                direction=direction,
+                mode=mode,
+            )
+        )
+
+    @app.get("/api/graph/api-links")
+    async def api_graph_links():
+        p = _repo() / ".context-harvester" / "api_links.json"
+        if not p.is_file():
+            return JSONResponse({"links": [], "count": 0})
+        return JSONResponse(json.loads(p.read_text(encoding="utf-8")))
 
     @app.get("/api/graph/analysis")
     async def api_analysis(recalculate: bool = False):

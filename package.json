@@ -2,7 +2,7 @@
   "name": "context-harvester",
   "displayName": "Context Harvester",
   "description": "Semantic codebase search in locale con Ollama — genera file context per feature.",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "license": "SEE LICENSE IN LICENSE",
   "publisher": "context-harvester",
   "repository": {
@@ -337,6 +337,21 @@
         "contextHarvester.ollama.labelExpansion.model": {
           "type": "string",
           "default": "qwen3:4b"
+        },
+        "contextHarvester.v2Symbols": {
+          "type": "boolean",
+          "default": true,
+          "description": "v5 — symbol_index_v2, entity_index, file_symbol_map (in parallelo al symbol index legacy)."
+        },
+        "contextHarvester.v2ApiMatching": {
+          "type": "boolean",
+          "default": true,
+          "description": "v5 — api_client_index, backend_route_index, api_links.json con confidence."
+        },
+        "contextHarvester.sigmaViewer": {
+          "type": "boolean",
+          "default": true,
+          "description": "v5 — tab Sigma.js nella Graph View (file view + expanded file)."
         },
         "contextHarvester.webapp.autoOpenBrowser": {
           "type": "boolean",

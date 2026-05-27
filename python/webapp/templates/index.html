@@ -18,6 +18,7 @@
     <button type="button" class="tab" data-tab="impact">⚡ Impact</button>
     <button type="button" class="tab" data-tab="analysis">🔍 Analisi</button>
     <button type="button" class="tab" data-tab="functions">🏷 Funzionalità</button>
+    <button type="button" class="tab" data-tab="sigma">◈ Grafo v5</button>
   </nav>
 
   <main>
@@ -89,9 +90,27 @@
         <button type="button" id="lf-save" class="primary" disabled>✅ Salva come funzionalità</button>
       </div>
     </section>
+
+    <section id="panel-sigma" class="panel">
+      <div class="toolbar">
+        <span class="muted">Sigma.js — file view (click per espandere dettaglio)</span>
+        <input type="search" id="sigma-search" placeholder="Cerca file..." style="flex:1;min-width:10rem" />
+        <button type="button" id="sigma-fit">Fit</button>
+        <button type="button" id="sigma-collapse" disabled>◁ Torna a file view</button>
+      </div>
+      <p id="sigma-status" class="muted small"></p>
+      <div id="sigma-container" class="graph-container"></div>
+      <div id="sigma-detail" class="sigma-detail-panel hidden">
+        <h3 id="sigma-detail-title">Dettaglio</h3>
+        <pre id="sigma-detail-body" class="sigma-detail-body"></pre>
+      </div>
+    </section>
   </main>
 
   <script src="/vendor/vis-network/vis-network.min.js"></script>
+  <script src="https://unpkg.com/graphology@0.25.4/dist/graphology.umd.min.js"></script>
+  <script src="https://unpkg.com/sigma@2.4.0/dist/sigma.min.js"></script>
   <script src="/static/app.js"></script>
+  <script src="/static/sigma-view.js"></script>
 </body>
 </html>
