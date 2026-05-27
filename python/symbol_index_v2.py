@@ -276,6 +276,14 @@ def build_symbol_index_v2(config: dict[str, Any]) -> dict[str, Any]:
                         }
                     )
 
+    emit_progress("symbol_index_v2", "Roslyn C# merge", 0, 1)
+    if config.get("useRoslyn", True):
+        from roslyn_bridge import merge_roslyn_into_symbol_v2, run_roslyn_scan
+
+        scan = run_roslyn_scan(repo)
+        if scan:
+            merge_roslyn_into_symbol_v2(scan, nodes, edges, file_map, entities)
+
     index = {
         "version": "5.0",
         "nodes": nodes,

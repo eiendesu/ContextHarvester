@@ -67,5 +67,6 @@ def build_api_links(
 
     result = {"version": "5.0", "links": links, "count": len(links)}
     out = harvester_root(repo) / "api_links.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
     return result

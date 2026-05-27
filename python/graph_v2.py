@@ -122,6 +122,39 @@ def run_graph_v2(config: dict[str, Any], file_groups: dict[str, str] | None = No
                     }
                 )
 
+    # Import graph (TypeScript)
+    import_g = _load_json(repo, "import_graph.json")
+    for ie in import_g.get("edges") or []:
+        sf, tf = ie.get("from"), ie.get("to")
+        sid, tid = file_nodes.get(sf), file_nodes.get(tf)
+        if sid and tid and sid != tid:
+            edges.append(
+                {
+                    "source": sid,
+                    "target": tid,
+                    "type": "imports",
+                    "weight": 1.0,
+                    "confidence": 0.9,
+                    "origin": "import_graph",
+                }
+            )
+
+    # Caller → API client (consumer imports api file)
+    for c in import_g.get("callers") or []:
+        cf, af = c.get("consumerFile"), c.get("apiFile")
+        sid, tid = file_nodes.get(cf), file_nodes.get(af)
+        if sid and tid:
+            edges.append(
+                {
+                    "source": sid,
+                    "target": tid,
+                    "type": "imports",
+                    "weight": 1.0,
+                    "confidence": 0.85,
+                    "origin": "import_graph",
+                }
+            )
+
     # API cross-layer edges
     for link in api_links.get("links") or []:
         conf = float(link.get("confidence", 0.5))
@@ -165,6 +198,8 @@ def run_graph_v2(config: dict[str, Any], file_groups: dict[str, str] | None = No
                     "origin": "api_matcher",
                 }
             )
+
+    node_by_id = {n["id"]: n for n in nodes}
 
     # File-level nodes for graph_file
     file_edges = _aggregate_file_edges(edges, node_by_id)
@@ -242,6 +277,33 @@ def _ensure_endpoint_node(
     return eid
 
 
+_CROSS_LAYER_TYPES = frozenset(
+    {"http_calls", "http_calls_inferred", "served_by", "imports", "api_endpoint", "api_client_method"}
+)
+
+
+def _filtered_adjacency(
+    repo: Path,
+    direction: str,
+    cross_layer: bool,
+) -> dict[str, list[str]]:
+    detail = _load_json(repo, "graph_detail.json")
+    upstream: dict[str, list[str]] = defaultdict(list)
+    downstream: dict[str, list[str]] = defaultdict(list)
+    for e in detail.get("edges") or []:
+        if e.get("type") == "contains":
+            continue
+        if cross_layer and e.get("type") not in _CROSS_LAYER_TYPES:
+            continue
+        s, t = e.get("source"), e.get("target")
+        if s and t:
+            downstream[s].append(t)
+            upstream[t].append(s)
+    if direction == "upstream":
+        return {k: sorted(set(v)) for k, v in upstream.items()}
+    return {k: sorted(set(v)) for k, v in downstream.items()}
+
+
 def impact_analysis_v2(
     repo: Path,
     node_id: str,
@@ -249,21 +311,33 @@ def impact_analysis_v2(
     max_depth: int = 3,
     direction: str = "downstream",
     mode: str = "transitive",
+    cross_layer: bool = False,
 ) -> dict[str, Any]:
-    """Impact on typed graph using impact_index.json."""
-    idx = _load_json(repo, "impact_index.json")
+    """Impact on typed graph using impact_index or filtered detail edges."""
     detail = _load_json(repo, "graph_detail.json")
     node_by_id = {n["id"]: n for n in detail.get("nodes") or []}
 
-    if direction == "upstream":
-        adj = idx.get("upstream") or {}
+    if cross_layer:
+        adj = _filtered_adjacency(repo, direction, True)
     else:
-        adj = idx.get("downstream") or {}
+        idx = _load_json(repo, "impact_index.json")
+        adj = idx.get("upstream" if direction == "upstream" else "downstream") or {}
+
+    # resolve node_id by label/file if not exact id
+    if node_id not in node_by_id:
+        q = node_id.lower()
+        for n in detail.get("nodes") or []:
+            if n.get("id") == node_id:
+                break
+            if q in (n.get("label") or "").lower() or q in (n.get("filePath") or "").lower():
+                node_id = n["id"]
+                break
 
     visited: set[str] = set()
     layers: dict[int, list[dict[str, Any]]] = {}
     frontier = [node_id]
     depth = 0
+    path_edges: list[dict[str, str]] = []
     while frontier and depth < max_depth:
         depth += 1
         next_f: list[str] = []
@@ -279,11 +353,13 @@ def impact_analysis_v2(
                     "label": n.get("label", nid),
                     "type": n.get("type"),
                     "file": n.get("filePath"),
+                    "qualifiedName": n.get("qualifiedName"),
                 }
             )
             for nb in adj.get(nid, []):
                 if nb not in visited:
                     next_f.append(nb)
+                    path_edges.append({"from": nid, "to": nb})
         if layer_items:
             layers[depth] = layer_items
         frontier = next_f
@@ -294,6 +370,85 @@ def impact_analysis_v2(
         "node": node_id,
         "direction": direction,
         "mode": mode,
+        "crossLayer": cross_layer,
         "total": sum(len(v) for v in layers.values()),
         "impact": layers,
+        "pathEdges": path_edges[:200],
     }
+
+
+def find_path_v2(
+    repo: Path,
+    source_id: str,
+    target_id: str,
+    *,
+    max_depth: int = 12,
+    cross_layer: bool = False,
+) -> dict[str, Any]:
+    """BFS shortest path between two detail nodes."""
+    detail = _load_json(repo, "graph_detail.json")
+    node_by_id = {n["id"]: n for n in detail.get("nodes") or []}
+    adj = _filtered_adjacency(repo, "downstream", cross_layer) if cross_layer else _load_json(repo, "impact_index.json").get("downstream", {})
+
+    if source_id not in node_by_id or target_id not in node_by_id:
+        for n in detail.get("nodes") or []:
+            lid = n.get("id", "")
+            if source_id not in node_by_id and source_id.lower() in (n.get("label") or "").lower():
+                source_id = lid
+            if target_id not in node_by_id and target_id.lower() in (n.get("label") or "").lower():
+                target_id = lid
+
+    queue: list[tuple[str, list[str]]] = [(source_id, [source_id])]
+    seen = {source_id}
+    while queue:
+        cur, path = queue.pop(0)
+        if len(path) > max_depth:
+            continue
+        if cur == target_id:
+            return {
+                "found": True,
+                "length": len(path) - 1,
+                "path": [
+                    {
+                        "id": pid,
+                        "label": node_by_id.get(pid, {}).get("label", pid),
+                        "type": node_by_id.get(pid, {}).get("type"),
+                    }
+                    for pid in path
+                ],
+            }
+        for nb in adj.get(cur, []):
+            if nb not in seen:
+                seen.add(nb)
+                queue.append((nb, path + [nb]))
+    return {"found": False, "source": source_id, "target": target_id}
+
+
+def search_nodes_v2(
+    repo: Path,
+    query: str,
+    *,
+    node_type: str = "",
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    detail = _load_json(repo, "graph_detail.json")
+    q = (query or "").lower().strip()
+    if not q:
+        return []
+    out: list[dict[str, Any]] = []
+    for n in detail.get("nodes") or []:
+        if node_type and n.get("type") != node_type:
+            continue
+        hay = f"{n.get('label','')} {n.get('qualifiedName','')} {n.get('filePath','')} {n.get('id','')}".lower()
+        if q in hay:
+            out.append(
+                {
+                    "id": n.get("id"),
+                    "label": n.get("label"),
+                    "type": n.get("type"),
+                    "filePath": n.get("filePath"),
+                }
+            )
+        if len(out) >= limit:
+            break
+    return out

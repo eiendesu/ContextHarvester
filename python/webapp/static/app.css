@@ -296,3 +296,25 @@ main { flex: 1; min-height: 0; position: relative; }
 }
 
 .highlight-set { border: 2px solid var(--accent) !important; }
+
+.sigma-toolbar, .sigma-filters {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sigma-filters label {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.sigma-impact-preview {
+  margin-top: 6px;
+  max-height: 120px;
+  overflow: auto;
+}
+.path-result .path-hop {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 2px;
+  background: #2a3a4a;
+  border-radius: 3px;
+  font-size: 11px;
+}

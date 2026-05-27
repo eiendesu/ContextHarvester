@@ -131,6 +131,21 @@ Parser C# backend: regex migliorato (Roslyn pianificato). TypeScript API: regex 
 | `v2Symbols` | true |
 | `v2ApiMatching` | true |
 | `sigmaViewer` | true |
+| `useRoslyn` | true (richiede .NET 8 SDK per `tools/RoslynHarvester`) |
+| `semanticChunking` | false (tree-sitter per chunk ChromaDB) |
+
+### Parser e viewer (milestone 5 complete)
+
+| Componente | Tecnologia |
+|------------|------------|
+| C# symbols/routes | **Roslyn** (`tools/RoslynHarvester`) + regex fallback |
+| TypeScript API | **tree-sitter** (`ts_parser.py`) + regex fallback |
+| Import graph | `import_graph.json` (caller → API client) |
+| Viewer principale | **Sigma.js** — file view, expanded file, full detail con filtri |
+| Impact | v2 typed: upstream/downstream, direct/transitive, cross-layer API |
+| Percorsi | `GET /api/graph/path?source=&target=` |
+
+Tab **Grafo** (Sigma) è il default nella web app; **Grafo (legacy)** resta vis-network.
 
 ### Settings v4
 

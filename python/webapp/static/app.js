@@ -187,22 +187,38 @@
   $('graph-group-filter').addEventListener('change', applyGraphFilterAndFocus);
   $('graph-fit').addEventListener('click', () => network && network.fit());
 
-  // Impact
+  // Impact (v1 file-level or v2 typed)
   $('impact-run').addEventListener('click', async () => {
     const node = $('impact-node').value.trim() || selectedNodeId;
     if (!node) return;
     const depth = $('impact-depth').value;
+    const direction = $('impact-direction')?.value || 'downstream';
+    const mode = $('impact-mode')?.value || 'transitive';
+    const useV2 = $('impact-v2')?.checked;
+    const crossLayer = $('impact-cross-layer')?.checked;
     $('impact-results').innerHTML = '<p class="muted">Calcolo...</p>';
-    const data = await api(`/api/graph/impact/${encodeURIComponent(node)}?max_depth=${depth}`);
+    const url = useV2
+      ? `/api/graph/impact-v2/${encodeURIComponent(node)}?max_depth=${depth}&direction=${direction}&mode=${mode}&cross_layer=${crossLayer}`
+      : `/api/graph/impact/${encodeURIComponent(node)}?max_depth=${depth}`;
+    const data = await api(url);
     if (data.error) {
-      $('impact-results').innerHTML = `<p>${data.error}</p>`;
+      $('impact-results').innerHTML = `<p>${escapeHtml(data.error)}</p>`;
       return;
     }
-    let html = `<h3>Impatto su <strong>${data.label || data.node}</strong> — totale ${data.total}</h3>`;
+    let html = `<h3>Impatto ${useV2 ? 'v2' : 'file'} — <strong>${escapeHtml(data.label || data.node)}</strong> (${data.total} nodi)</h3>`;
+    if (data.crossLayer) html += '<p class="muted">Modalità cross-layer (solo edge API/import)</p>';
     for (const [d, items] of Object.entries(data.impact || {})) {
       html += `<h4>Distanza ${d}</h4><ul>`;
       items.forEach((it) => {
-        html += `<li>${it.label} <code>${it.file}</code></li>`;
+        const typeBadge = it.type ? ` <span class="badge">${escapeHtml(it.type)}</span>` : '';
+        html += `<li>${escapeHtml(it.label || it.id)}${typeBadge} <code>${escapeHtml(it.file || '')}</code></li>`;
+      });
+      html += '</ul>';
+    }
+    if (data.pathEdges?.length) {
+      html += '<h4>Edge nel percorso</h4><ul>';
+      data.pathEdges.slice(0, 30).forEach((e) => {
+        html += `<li><code>${escapeHtml(e.from)}</code> → <code>${escapeHtml(e.to)}</code></li>`;
       });
       html += '</ul>';
     }
@@ -499,6 +515,9 @@
     await loadStatus();
     await loadGraph();
     await loadFunctions();
+    if (window.chSigmaView?.loadFileView) {
+      window.chSigmaView.loadFileView();
+    }
   }
 
   init().catch((e) => {

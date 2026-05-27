@@ -2,7 +2,7 @@
   "name": "context-harvester",
   "displayName": "Context Harvester",
   "description": "Semantic codebase search in locale con Ollama — genera file context per feature.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "license": "SEE LICENSE IN LICENSE",
   "publisher": "context-harvester",
   "repository": {
@@ -352,6 +352,16 @@
           "type": "boolean",
           "default": true,
           "description": "v5 — tab Sigma.js nella Graph View (file view + expanded file)."
+        },
+        "contextHarvester.useRoslyn": {
+          "type": "boolean",
+          "default": true,
+          "description": "v5 — parser C# Roslyn (richiede .NET SDK) per symbol index e route backend."
+        },
+        "contextHarvester.semanticChunking": {
+          "type": "boolean",
+          "default": false,
+          "description": "v5 — chunking semantico tree-sitter al posto della sola sliding window."
         },
         "contextHarvester.webapp.autoOpenBrowser": {
           "type": "boolean",

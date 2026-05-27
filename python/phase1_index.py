@@ -93,7 +93,14 @@ def _index_collection(
             except Exception:
                 pass
 
-            chunks = chunk_text_sliding(content, chunk_size, chunk_overlap)
+            if config.get("semanticChunking", False):
+                from chunking_semantic import semantic_chunks
+
+                chunks = semantic_chunks(
+                    content, language_for_ext(path.suffix), chunk_size, chunk_overlap
+                )
+            else:
+                chunks = chunk_text_sliding(content, chunk_size, chunk_overlap)
             if not chunks:
                 continue
 
@@ -208,13 +215,17 @@ def run(config: dict[str, Any]) -> dict[str, Any]:
         from api_client_index import build_api_client_index
         from api_matcher import build_api_links
         from backend_route_index import build_backend_route_index
+        from import_graph import build_import_graph
 
         if tracker:
+            with tracker.phase("import_graph"):
+                build_import_graph(config)
             with tracker.phase("api_indexes"):
                 br = build_backend_route_index(config)
                 ac = build_api_client_index(config)
                 build_api_links(repo, ac, br)
         else:
+            build_import_graph(config)
             br = build_backend_route_index(config)
             ac = build_api_client_index(config)
             build_api_links(repo, ac, br)

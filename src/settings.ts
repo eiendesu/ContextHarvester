@@ -76,6 +76,8 @@ export interface HarvesterConfig {
   v2Symbols?: boolean;
   v2ApiMatching?: boolean;
   sigmaViewer?: boolean;
+  useRoslyn?: boolean;
+  semanticChunking?: boolean;
 
   /** Dev Lab — single phase id (see python/dev_phases.py). */
   devPhase?: string;
@@ -222,6 +224,8 @@ export function buildConfig(overrides: Partial<HarvesterConfig> = {}): Harvester
     v2Symbols: cfg('v2Symbols', true),
     v2ApiMatching: cfg('v2ApiMatching', true),
     sigmaViewer: cfg('sigmaViewer', true),
+    useRoslyn: cfg('useRoslyn', true),
+    semanticChunking: cfg('semanticChunking', false),
     ...overrides,
   };
 }

@@ -119,6 +119,7 @@ def create_http_app(mcp_app=None) -> FastAPI:
         max_depth: int = 3,
         direction: str = "downstream",
         mode: str = "transitive",
+        cross_layer: bool = False,
     ):
         from graph_v2 import impact_analysis_v2
 
@@ -129,7 +130,27 @@ def create_http_app(mcp_app=None) -> FastAPI:
                 max_depth=max_depth,
                 direction=direction,
                 mode=mode,
+                cross_layer=cross_layer,
             )
+        )
+
+    @app.get("/api/graph/search")
+    async def api_graph_search(q: str = "", node_type: str = "", limit: int = 50):
+        from graph_v2 import search_nodes_v2
+
+        return JSONResponse({"results": search_nodes_v2(_repo(), q, node_type=node_type, limit=limit)})
+
+    @app.get("/api/graph/path")
+    async def api_graph_path(
+        source: str,
+        target: str,
+        max_depth: int = 12,
+        cross_layer: bool = False,
+    ):
+        from graph_v2 import find_path_v2
+
+        return JSONResponse(
+            find_path_v2(_repo(), source, target, max_depth=max_depth, cross_layer=cross_layer)
         )
 
     @app.get("/api/graph/api-links")

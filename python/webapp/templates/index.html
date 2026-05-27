@@ -14,15 +14,15 @@
   </header>
 
   <nav class="tabs" id="tabs">
-    <button type="button" class="tab active" data-tab="graph">🗺 Grafo</button>
+    <button type="button" class="tab" data-tab="graph">🗺 Grafo (legacy)</button>
+    <button type="button" class="tab active" data-tab="sigma">◈ Grafo</button>
     <button type="button" class="tab" data-tab="impact">⚡ Impact</button>
     <button type="button" class="tab" data-tab="analysis">🔍 Analisi</button>
     <button type="button" class="tab" data-tab="functions">🏷 Funzionalità</button>
-    <button type="button" class="tab" data-tab="sigma">◈ Grafo v5</button>
   </nav>
 
   <main>
-    <section id="panel-graph" class="panel active">
+    <section id="panel-graph" class="panel">
       <div class="toolbar">
         <input type="search" id="graph-search" placeholder="Cerca nodo o simbolo..." />
         <button type="button" id="graph-search-btn" class="primary">🔍 Cerca</button>
@@ -45,9 +45,19 @@
 
     <section id="panel-impact" class="panel">
       <div class="toolbar">
-        <label>Se modifico: <input type="text" id="impact-node" placeholder="LeadService o path file" /></label>
+        <label>Nodo: <input type="text" id="impact-node" placeholder="nome metodo, endpoint o path file" style="min-width:14rem" /></label>
         <button type="button" id="impact-run">Analizza</button>
-        <label>Max distanza: <input type="number" id="impact-depth" value="3" min="1" max="5" style="width:3rem" /></label>
+        <label>Distanza <input type="number" id="impact-depth" value="3" min="1" max="8" style="width:3rem" /></label>
+        <select id="impact-direction" title="Direzione">
+          <option value="downstream">Downstream</option>
+          <option value="upstream">Upstream</option>
+        </select>
+        <select id="impact-mode">
+          <option value="transitive">Transitive</option>
+          <option value="direct">Direct</option>
+        </select>
+        <label><input type="checkbox" id="impact-v2" checked /> v2 typed</label>
+        <label><input type="checkbox" id="impact-cross-layer" /> Cross-layer API</label>
       </div>
       <div id="impact-results" class="scroll-panel"></div>
     </section>
@@ -91,15 +101,35 @@
       </div>
     </section>
 
-    <section id="panel-sigma" class="panel">
-      <div class="toolbar">
-        <span class="muted">Sigma.js — file view (click per espandere dettaglio)</span>
-        <input type="search" id="sigma-search" placeholder="Cerca file..." style="flex:1;min-width:10rem" />
+    <section id="panel-sigma" class="panel active">
+      <div class="toolbar sigma-toolbar">
+        <input type="search" id="sigma-search" placeholder="Cerca file, metodo, DTO, endpoint (min 2 char per full detail)..." style="flex:1;min-width:12rem" />
+        <button type="button" id="sigma-search-btn" class="primary">Cerca</button>
         <button type="button" id="sigma-fit">Fit</button>
-        <button type="button" id="sigma-collapse" disabled>◁ Torna a file view</button>
+        <button type="button" id="sigma-collapse" disabled>◁ File view</button>
+        <button type="button" id="sigma-full-detail">Full detail</button>
       </div>
+      <div class="toolbar sigma-filters">
+        <label>Peso min <input type="number" id="sigma-min-weight" value="0" min="0" max="5" step="0.1" style="width:3rem" /></label>
+        <label>Max nodi <input type="number" id="sigma-max-nodes" value="400" min="50" max="2000" style="width:4rem" /></label>
+        <label><input type="checkbox" id="sigma-hide-private" checked /> Nascondi private</label>
+        <label><input type="checkbox" data-sigma-type="method" checked /> Metodi</label>
+        <label><input type="checkbox" data-sigma-type="dto" checked /> DTO</label>
+        <label><input type="checkbox" data-sigma-type="api_client_method" checked /> API client</label>
+        <label><input type="checkbox" data-sigma-type="api_endpoint" checked /> Endpoint</label>
+        <label><input type="checkbox" id="sigma-cross-layer" /> Cross-layer impact</label>
+        <label>Impact depth <input type="number" id="sigma-impact-depth" value="2" min="1" max="6" style="width:2.5rem" /></label>
+        <select id="sigma-impact-dir"><option value="downstream">Down</option><option value="upstream">Up</option></select>
+      </div>
+      <div class="toolbar">
+        <input type="text" id="sigma-path-from" placeholder="Path from (id o label)" style="flex:1" />
+        <input type="text" id="sigma-path-to" placeholder="Path to" style="flex:1" />
+        <button type="button" id="sigma-path-btn">Traccia percorso API</button>
+      </div>
+      <p id="sigma-path-result" class="muted small path-result"></p>
       <p id="sigma-status" class="muted small"></p>
       <div id="sigma-container" class="graph-container"></div>
+      <div id="sigma-impact-preview" class="sigma-impact-preview muted small"></div>
       <div id="sigma-detail" class="sigma-detail-panel hidden">
         <h3 id="sigma-detail-title">Dettaglio</h3>
         <pre id="sigma-detail-body" class="sigma-detail-body"></pre>

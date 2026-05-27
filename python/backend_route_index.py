@@ -1,4 +1,4 @@
-"""ASP.NET controller/action route index (v5) — regex-based; Roslyn optional later."""
+"""ASP.NET controller/action route index (v5) — Roslyn primary, regex fallback."""
 from __future__ import annotations
 
 import json
@@ -25,21 +25,13 @@ def _line_number(text: str, pos: int) -> int:
     return text.count("\n", 0, pos) + 1
 
 
-def build_backend_route_index(config: dict[str, Any]) -> dict[str, Any]:
-    repo = Path(config["repoPath"]).resolve()
-    exclude = merge_exclude_folders(config.get("excludeFolders"))
+def _regex_endpoints(repo: Path, exclude: list[str]) -> list[dict[str, Any]]:
     endpoints: list[dict[str, Any]] = []
-
     for path in repo.rglob("*.cs"):
         rel = rel_path(path, repo)
         if any(x in rel.replace("/", "\\").lower() for x in ("\\bin\\", "\\obj\\", "/bin/", "/obj/")):
             continue
-        skip = False
-        for exc in exclude:
-            if exc.lower() in rel.lower():
-                skip = True
-                break
-        if skip:
+        if any(exc.lower() in rel.lower() for exc in exclude):
             continue
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
@@ -61,17 +53,13 @@ def build_backend_route_index(config: dict[str, Any]) -> dict[str, Any]:
         for hm in _HTTP_ATTR.finditer(text):
             verb = hm.group(2).upper()
             action_route = (hm.group(3) or "").strip()
-            # find nearest method name after attribute
             tail = text[hm.end() : hm.end() + 400]
             mm = _METHOD_NAME.search(tail)
             action_name = mm.group(1) if mm else ""
             full = class_route_norm
             if action_route:
                 sub = normalize_path(action_route)
-                if not sub.startswith("/"):
-                    full = normalize_path(f"{class_route_norm}/{sub}")
-                else:
-                    full = sub
+                full = normalize_path(f"{class_route_norm}/{sub}") if not sub.startswith("/") else sub
             full = expand_action_token(full, action_name)
             endpoints.append(
                 {
@@ -84,13 +72,41 @@ def build_backend_route_index(config: dict[str, Any]) -> dict[str, Any]:
                     "file": rel,
                     "line": _line_number(text, hm.start()),
                     "qualifiedName": f"{controller}.{action_name}",
+                    "origin": "regex",
                 }
             )
+    return endpoints
+
+
+def build_backend_route_index(config: dict[str, Any]) -> dict[str, Any]:
+    repo = Path(config["repoPath"]).resolve()
+    exclude = merge_exclude_folders(config.get("excludeFolders"))
+    endpoints: list[dict[str, Any]] = []
+    seen_keys: set[str] = set()
+
+    if config.get("useRoslyn", True):
+        from roslyn_bridge import roslyn_backend_endpoints, run_roslyn_scan
+
+        scan = run_roslyn_scan(repo)
+        if scan:
+            for ep in roslyn_backend_endpoints(scan, repo):
+                key = ep.get("routeKey") or ""
+                if key and key not in seen_keys:
+                    seen_keys.add(key)
+                    endpoints.append(ep)
+
+    for ep in _regex_endpoints(repo, exclude):
+        key = ep.get("routeKey") or ""
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        endpoints.append(ep)
 
     index = {
         "version": "5.0",
         "endpoints": endpoints,
         "count": len(endpoints),
+        "sources": {"roslyn": sum(1 for e in endpoints if e.get("origin") == "roslyn"), "regex": sum(1 for e in endpoints if e.get("origin") == "regex")},
     }
     out = harvester_root(repo) / "backend_route_index.json"
     out.parent.mkdir(parents=True, exist_ok=True)
