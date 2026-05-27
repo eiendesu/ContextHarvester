@@ -1,5 +1,11 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
+REM Finestra sempre aperta (doppio clic): attende un tasto anche in caso di errore.
+if not "%CH_BUILD_KEEPOPEN%"=="1" (
+  set "CH_BUILD_KEEPOPEN=1"
+  cmd /k "set CH_BUILD_KEEPOPEN=1& call "%~f0" %*"
+  exit /b 0
+)
 REM ============================================================================
 REM  Rilascio Context Harvester: compila estensione + VSIX in cartella versionata.
 REM
@@ -20,8 +26,14 @@ REM ============================================================================
 
 set "BAT_RC=0"
 
-cd /d "%~dp0.." || (set "BAT_RC=1" & goto :pause_end)
+cd /d "%~dp0.."
+if errorlevel 1 (
+  echo [ERRORE] Impossibile entrare nella cartella del repository.
+  set "BAT_RC=1"
+  goto :pause_end
+)
 set "ROOT=%CD%"
+
 
 set "REL_OUT=%~1"
 if "!REL_OUT!"=="" set "REL_OUT=%CONTEXT_HARVESTER_RELEASE_ROOT%"
@@ -57,7 +69,12 @@ if not exist "%ROOT%\package.json" (
   goto :pause_end
 )
 
-pushd "%ROOT%" || (set "BAT_RC=1" & goto :pause_end)
+pushd "%ROOT%"
+if errorlevel 1 (
+  echo [ERRORE] Impossibile aprire %ROOT%
+  set "BAT_RC=1"
+  goto :pause_end
+)
 for /f "delims=" %%V in ('node -p "require('./package.json').version" 2^>nul') do set "PKG_VER=%%V"
 for /f "delims=" %%F in ('node -p "const p=require('./package.json');p.name+'-'+p.version+'.vsix'" 2^>nul') do set "VSIX_FILE=%%F"
 popd
@@ -92,7 +109,14 @@ if exist "!OUT!" (
   echo [AVVISO] Cartella esistente, verra svuotata.
   rmdir /s /q "!OUT!"
 )
-mkdir "!OUT!" || (set "BAT_RC=1" & goto :pause_end)
+mkdir "!OUT!"
+if errorlevel 1 (
+  echo [ERRORE] Impossibile creare la cartella di output:
+  echo   !OUT!
+  set "BAT_RC=1"
+  goto :pause_end
+)
+
 
 > "!VER_DIR!\ULTIMA_BUILD.txt" (
   echo Ultima build Context Harvester
@@ -101,11 +125,27 @@ mkdir "!OUT!" || (set "BAT_RC=1" & goto :pause_end)
   echo   !OUT!
   echo.
   echo Timestamp UTC: !PKG_STAMP!
-  echo Avvio script:  !LOCAL_STAMP!
+  echo Pacchetto creato ^(locale^): !LOCAL_STAMP!
+  echo Data/ora ISO UTC: !PKG_ISO!
 )
 
-echo [1/3] Dipendenze npm + compile TypeScript ...
-pushd "%ROOT%" || (set "BAT_RC=1" & goto :pause_end)
+echo [1/4] build-info.json ^(versione + data/ora pacchetto^) ...
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$ErrorActionPreference='Stop'; $o=@{version='%PKG_VER%';buildUtc='%PKG_STAMP%';buildIso='%PKG_ISO%';buildLocal='%LOCAL_STAMP%'}; $p=Join-Path '%ROOT%' 'media\build-info.json'; $dir=Split-Path $p; if(-not(Test-Path $dir)){New-Item -ItemType Directory -Path $dir -Force|Out-Null}; $o|ConvertTo-Json|Set-Content -LiteralPath $p -Encoding UTF8"
+if errorlevel 1 (
+  echo [ERRORE] Generazione media\build-info.json fallita.
+  set "BAT_RC=1"
+  goto :pause_end
+)
+
+echo [2/4] Dipendenze npm + compile TypeScript ...
+pushd "%ROOT%"
+if errorlevel 1 (
+  echo [ERRORE] Impossibile aprire %ROOT%
+  set "BAT_RC=1"
+  goto :pause_end
+)
+
 if exist package-lock.json (
   call npm ci
 ) else (
@@ -127,9 +167,15 @@ if errorlevel 1 (
 popd
 
 echo.
-echo [2/3] Creazione VSIX ...
-pushd "%ROOT%" || (set "BAT_RC=1" & goto :pause_end)
-call npx --yes @vscode/vsce@latest package --allow-missing-repository --out "!OUT!\!VSIX_FILE!"
+echo [3/4] Creazione VSIX ...
+pushd "%ROOT%"
+if errorlevel 1 (
+  echo [ERRORE] Impossibile aprire %ROOT%
+  set "BAT_RC=1"
+  goto :pause_end
+)
+
+call npx --yes @vscode/vsce@latest package --allow-missing-repository --baseContentUrl "https://github.com/eiendesu/ContextHarvester/blob/main" --baseImagesUrl "https://github.com/eiendesu/ContextHarvester/raw/main" --out "!OUT!\!VSIX_FILE!"
 set "VSCE_RC=!ERRORLEVEL!"
 popd
 if not "!VSCE_RC!"=="0" (
@@ -139,15 +185,22 @@ if not "!VSCE_RC!"=="0" (
 )
 
 echo.
-echo [3/3] Script installazione + LEGGIMI ...
+echo [4/4] Script installazione + LEGGIMI + BUILD_INFO ...
 copy /Y "%~dp0Installa-su-VSCode.bat" "!OUT!\" >nul
 if errorlevel 1 (
   echo [ERRORE] Copia Installa-su-VSCode.bat fallita
   set "BAT_RC=1"
   goto :pause_end
 )
+copy /Y "%~dp0Post-Installa-Python.bat" "!OUT!\" >nul
+if errorlevel 1 (
+  echo [ERRORE] Copia Post-Installa-Python.bat fallita
+  set "BAT_RC=1"
+  goto :pause_end
+)
 
-call :write_readme "!OUT!" "%ROOT%" "!PKG_VER!" "!PKG_STAMP!" "!PKG_ISO!" "!RELEASE_BASE!" "!VSIX_FILE!"
+call :write_readme "!OUT!" "%ROOT%" "!PKG_VER!" "!PKG_STAMP!" "!PKG_ISO!" "!LOCAL_STAMP!" "!RELEASE_BASE!" "!VSIX_FILE!"
+call :write_build_info "!OUT!" "!PKG_VER!" "!PKG_STAMP!" "!PKG_ISO!" "!LOCAL_STAMP!"
 
 echo.
 echo ============================================================
@@ -155,9 +208,10 @@ echo  Pacchetto pronto per la distribuzione.
 echo.
 echo   !OUT!
 echo   VSIX:  !VSIX_FILE!
+echo   Build: !LOCAL_STAMP!  ^(UTC !PKG_STAMP!^)
 echo.
-echo  Sul PC destinazione: copia l INTERA cartella e lancia
-echo    Installa-su-VSCode.bat
+  echo  Sul PC destinazione: copia l INTERA cartella.
+  echo  VSIX manuale: usa Post-Installa-Python.bat dopo Installa da VSIX.
 echo ============================================================
 
 start "" explorer "!OUT!"
@@ -165,25 +219,57 @@ goto :pause_end
 
 :pause_end
 echo.
-pause
-exit /b %BAT_RC%
+echo ------------------------------------------------------------
+if "!BAT_RC!"=="0" (
+  echo Build completata.
+) else (
+  echo Build terminata con ERRORI ^(codice !BAT_RC!^).
+  echo Controlla i messaggi [ERRORE] sopra.
+)
+echo ------------------------------------------------------------
+echo.
+echo Premi un tasto per continuare...
+pause >nul 2>&1
+if errorlevel 1 pause
+exit /b !BAT_RC!
 
 REM ---------------------------------------------------------------------------
+:write_build_info
+set "_O=%~1"
+set "_V=%~2"
+set "_S=%~3"
+set "_I=%~4"
+set "_L=%~5"
+(
+  echo Context Harvester — BUILD INFO
+  echo ============================================================
+  echo Versione estensione:     %_V%
+  echo Pacchetto creato ^(locale^): %_L%
+  echo Timestamp cartella UTC:  %_S%
+  echo Data/ora ISO UTC:        %_I%
+  echo.
+  echo Sul pannello VS Code vedrai: v%_V% · %_L%
+) > "%_O%\BUILD_INFO.txt"
+exit /b 0
+
 :write_readme
 set "_O=%~1"
 set "_R=%~2"
 set "_V=%~3"
 set "_S=%~4"
 set "_I=%~5"
-set "_B=%~6"
-set "_X=%~7"
+set "_L=%~6"
+set "_B=%~7"
+set "_X=%~8"
 (
   echo Context Harvester — pacchetto di installazione
   echo ============================================================
   echo Versione:              %_V%
+  echo Pacchetto creato ^(locale^): %_L%
   echo Timestamp pacchetto UTC: %_S%
   echo Data/ora ISO UTC:        %_I%
   echo File VSIX:               %_X%
+  echo Vedi anche:              BUILD_INFO.txt
   echo Cartella base release:   %_B%
   echo.
   echo Generato da: scripts\build-release-context-harvester.bat
@@ -192,13 +278,28 @@ set "_X=%~7"
   echo INSTALLAZIONE SU UN ALTRO PC
   echo ----------------------------
   echo 1. Copia questa intera cartella sul PC ^(USB, rete, zip^).
-  echo 2. Doppio clic su Installa-su-VSCode.bat
-  echo    ^(installa VSIX + ambiente Python dell estensione^).
-  echo 3. Installa Ollama da https://ollama.com e scarica i modelli:
-  echo      ollama pull nomic-embed-text
-  echo      ollama pull qwen2.5:3b
-  echo 4. Riavvia VS Code / Cursor.
+  echo.
+  echo Metodo A ^(consigliato se usi sempre Installa da VSIX^):
+  echo   a. VS Code chiuso
+  echo   b. Estensioni - Installa da VSIX - context-harvester-0.3.0.vsix
+  echo   c. Doppio clic su Post-Installa-Python.bat
+  echo   d. Riapri VS Code - Reload Window
+  echo.
+  echo Metodo B ^(tutto in uno^):
+  echo   Doppio clic su Installa-su-VSCode.bat
+  echo    ^(installa VSIX + ambiente Python; chiudi VS Code prima^).
+  echo 3. Installa-su-VSCode.bat propone anche:
+  echo      - installazione Ollama ^(se assente^)
+  echo      - download modelli in ..\ContextHarvesterModelli
+  echo        ^(cartella sorella rispetto a questa release^)
+  echo      - variabile utente OLLAMA_MODELS puntata a quella cartella
+  echo 4. Riavvia VS Code / Cursor ^(e Ollama dal menu Start se hai cambiato OLLAMA_MODELS^).
   echo 5. Apri un workspace e usa il pannello Context Harvester ^(icona sidebar^).
+  echo 6. ^(Opzionale^) Functional Analysis + valida community.
+  echo 7. ^(Opzionale v4^) Avvia MCP dal pannello, poi Apri Graph View ^(browser su http://127.0.0.1:3456/^).
+  echo      La web app e inclusa nel VSIX: python\webapp\ + vis.js in webview\vendor\.
+  echo      Per label-first consigliato: ollama pull qwen3:4b ^(opzione durante install^).
+  echo 8. ^(Opzionale^) Abilita MCP in Settings ^(genera .vscode/mcp.json^).
   echo.
   echo Prerequisiti sul PC destinazione:
   echo   - VS Code 1.96+ oppure Cursor

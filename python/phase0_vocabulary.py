@@ -3,15 +3,16 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from pathlib import Path
 from typing import Any
 
-from common import emit_progress, harvester_root, iter_repo_files, rel_path
+from common import emit_progress, harvester_root, iter_repo_files, merge_exclude_folders, rel_path
 
 
 def run(config: dict[str, Any]) -> Path:
     repo = Path(config["repoPath"]).resolve()
-    exclude_folders = config.get("excludeFolders", [])
+    exclude_folders = merge_exclude_folders(config.get("excludeFolders"))
     include_ext = config.get("includeExtensions", [])
     exclude_ext = config.get("excludeExtensions", [])
 
@@ -46,13 +47,18 @@ def run(config: dict[str, Any]) -> Path:
     sql_alter = re.compile(r"\bALTER\s+TABLE\s+([\w.]+)", re.I)
     sql_proc = re.compile(r"\bCREATE\s+(?:PROC|PROCEDURE)\s+([\w.]+)", re.I)
 
+    tracker = config.get("_indexTimingTracker")
+
     for i, path in enumerate(files, 1):
         emit_progress("phase0", "Vocabulary extraction", i, total)
+        t_file = time.perf_counter()
+        rel = rel_path(path, repo)
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
+            if tracker:
+                tracker.record_file(rel, (time.perf_counter() - t_file) * 1000)
             continue
-        rel = rel_path(path, repo)
         ext = path.suffix.lower()
 
         if ext == ".cs":
@@ -69,6 +75,9 @@ def run(config: dict[str, Any]) -> Path:
             vocab["tables"].extend(sql_table.findall(text))
             vocab["tables"].extend(sql_alter.findall(text))
             vocab["procedures"].extend(sql_proc.findall(text))
+
+        if tracker:
+            tracker.record_file(rel, (time.perf_counter() - t_file) * 1000, indexed=True)
 
     for key in vocab:
         vocab[key] = sorted(set(vocab[key]))

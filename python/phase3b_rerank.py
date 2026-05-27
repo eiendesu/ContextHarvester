@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from common import emit_progress, get_ollama_client, ollama_generate
+from common import emit_progress, get_ollama_client, ollama_generate, phase_model
 
 
 def _score_chunk(client, model: str, feature: str, chunk_text: str) -> float:
@@ -30,8 +30,10 @@ def run(config: dict[str, Any], chunks: list[dict[str, Any]]) -> list[dict[str, 
         return chunks[:top_k]
 
     emit_progress("phase3b", "Re-ranking")
-    client = get_ollama_client(config["ollamaUrl"])
-    model = config.get("rerankModel") or config.get("hydeModel", "qwen2.5:3b")
+    url, model = phase_model(config, "rerank")
+    if not model:
+        url, model = phase_model(config, "hyde")
+    client = get_ollama_client(url)
     feature = config.get("featureInput", "")
     top_k = int(config.get("topK", 10))
 

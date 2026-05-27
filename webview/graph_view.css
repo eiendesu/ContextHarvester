@@ -1,0 +1,95 @@
+.wrap {
+  padding: 8px;
+  font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+  color: var(--vscode-foreground, #ccc);
+  background: var(--vscode-editor-background, #1e1e1e);
+  height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.topbar h1 {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+}
+
+.stat {
+  text-align: right;
+  font-size: 12px;
+}
+
+.muted {
+  color: var(--vscode-descriptionForeground, #9ca3af);
+}
+
+.controls {
+  margin-bottom: 8px;
+}
+
+.controls label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+input[type='text'],
+select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid var(--vscode-input-border, #3c3c3c);
+  background: var(--vscode-input-background, #3c3c3c);
+  color: var(--vscode-input-foreground, #ccc);
+  border-radius: 4px;
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.btn {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  background: var(--vscode-button-background, #0e639c);
+  color: var(--vscode-button-foreground, #fff);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn.ghost {
+  background: transparent;
+  border: 1px solid var(--vscode-button-border, #0e639c);
+  color: var(--vscode-button-foreground, #ccc);
+}
+
+.panel {
+  border: 1px solid var(--vscode-panel-border, #3c3c3c);
+  border-radius: 4px;
+  padding: 8px;
+  min-height: 48px;
+}
+
+#graph-container {
+  flex: 1;
+  min-height: 400px;
+  border: 1px solid var(--vscode-panel-border, #3c3c3c);
+  border-radius: 4px;
+  background: var(--vscode-editor-background, #1e1e1e);
+}

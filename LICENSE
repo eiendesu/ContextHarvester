@@ -1,0 +1,66 @@
+Context Harvester License
+Version 1.0, May 2026
+
+Copyright (c) 2026 eiendesu and contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to use, copy,
+modify, and distribute the Software and derivative works based on the Software,
+subject to the following conditions:
+
+1. PERMITTED USES
+
+   You may:
+   - use the Software for any personal, educational, research, or internal
+     business purpose;
+   - modify the Software and create derivative works;
+   - share the Software or your modifications with others, provided you comply
+     with section 2.
+
+2. COMMERCIAL RESTRICTIONS
+
+   You may NOT, without prior written permission from the copyright holder:
+   - sell, rent, lease, sublicense, or otherwise commercialize the Software,
+     any portion of it, or any derivative work, for monetary or other valuable
+     consideration;
+   - offer the Software or derivative works as part of a paid product or
+     service;
+   - modify the Software (or a derivative work) primarily for the purpose of
+     selling or licensing it to third parties.
+
+   Internal use within an organization that does not involve selling or
+   licensing the Software (or derivatives) to external customers is permitted.
+
+3. DISTRIBUTION OF MODIFICATIONS
+
+   If you distribute the Software or a derivative work, you must:
+   - include a copy of this license;
+   - state significant changes made to the original Software;
+   - not remove or alter copyright notices.
+
+   Any distributed derivative work must be licensed under the same terms as
+   this license.
+
+4. NO WARRANTY
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+
+5. CONTACT
+
+   For commercial licensing inquiries, contact the repository maintainer at:
+   https://github.com/eiendesu/ContextHarvester
+
+---
+
+Riepilogo (non vincolante)
+
+Puoi usare e modificare liberamente Context Harvester. Non puoi venderlo, né
+vendere versioni modificate o prodotti/servizi che lo includano a pagamento.
+Per usi commerciali è richiesta un'autorizzazione scritta del titolare del
+copyright.

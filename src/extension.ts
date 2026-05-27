@@ -5,19 +5,29 @@ import { generateContext } from './commands/generateContext';
 import { openLastContext } from './commands/openContext';
 import { rebuildIndex } from './commands/rebuildIndex';
 import { ContextHarvesterPanel } from './panel';
-import { checkOllama, ensurePythonEnvironment } from './pythonRunner';
+import { DevLabPanel } from './devLabPanel';
+import { getActiveProfile, getProfiles } from './profiles';
+import { checkOllamaForProfile, ensurePythonEnvironment } from './pythonRunner';
 import { buildConfig, getAutoIndexSettings, getRepoPath, isPathExcluded } from './settings';
+import { openGraphView } from './graphView';
+import { validateCommunities } from './commands/validateCommunities';
+import { startMcpServer, stopMcpServer } from './mcpServer';
 
 let panelProvider: ContextHarvesterPanel;
+let devLabProvider: DevLabPanel;
 let autoIndexTimer: ReturnType<typeof setInterval> | undefined;
 let saveDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   panelProvider = new ContextHarvesterPanel(context);
+  devLabProvider = new DevLabPanel(context, panelProvider);
 
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(ContextHarvesterPanel.viewType, panelProvider)
+    vscode.window.registerWebviewViewProvider(ContextHarvesterPanel.viewType, panelProvider),
+    vscode.window.registerWebviewViewProvider(DevLabPanel.viewType, devLabProvider)
   );
+
+  await getProfiles(context);
 
   try {
     await ensurePythonEnvironment(context);
@@ -32,27 +42,72 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('context-harvester.openPanel', async () => {
       await vscode.commands.executeCommand('workbench.view.extension.context-harvester');
     }),
+    vscode.commands.registerCommand('context-harvester.openDevLab', async () => {
+      await vscode.commands.executeCommand('workbench.view.extension.context-harvester');
+      await vscode.commands.executeCommand('context-harvester.dev-lab.focus');
+    }),
     vscode.commands.registerCommand('context-harvester.rebuildIndex', () => rebuildIndex(panelProvider)),
     vscode.commands.registerCommand('context-harvester.generateContext', () => generateContext(panelProvider)),
     vscode.commands.registerCommand('context-harvester.openLastContext', () => openLastContext(context)),
     vscode.commands.registerCommand('context-harvester.checkOllama', async () => {
-      const cfg = buildConfig();
-      const result = await checkOllama(cfg.ollamaUrl);
+      const profile = await getActiveProfile(context);
+      const result = await checkOllamaForProfile(profile);
       if (!result.reachable) {
-        vscode.window.showErrorMessage(`Ollama non raggiungibile su ${cfg.ollamaUrl}`);
+        vscode.window.showErrorMessage(`Ollama non raggiungibile: ${result.urls.join(', ')}`);
       } else if (result.missingModels.length) {
         vscode.window.showWarningMessage(
           `Modelli mancanti: ${result.missingModels.join(', ')} — esegui: ollama pull ${result.missingModels[0]}`
         );
       } else {
-        vscode.window.showInformationMessage('Ollama OK — modelli richiesti presenti.');
+        vscode.window.showInformationMessage('Ollama OK — modelli del profilo attivo presenti.');
       }
       await panelProvider.refreshState();
     }),
-    vscode.commands.registerCommand('context-harvester.resetIndex', () => panelProvider.resetIndex())
+    vscode.commands.registerCommand('context-harvester.resetIndex', () => panelProvider.resetIndex()),
+    vscode.commands.registerCommand('context-harvester.showExecutionLog', () => {
+      panelProvider.showExecutionLog();
+    }),
+    vscode.commands.registerCommand('context-harvester.functionalAnalysis', () => {
+      return panelProvider.runAction('functional_analysis', buildConfig());
+    }),
+    vscode.commands.registerCommand('context-harvester.openGraphView', () => {
+      return openGraphView(context);
+    }),
+    vscode.commands.registerCommand('context-harvester.validateCommunities', () => {
+      return validateCommunities(panelProvider);
+    }),
+    vscode.commands.registerCommand('context-harvester.mcpStart', async () => {
+      const pythonPath = await ensurePythonEnvironment(context);
+      await startMcpServer(context, pythonPath);
+      await panelProvider.refreshState();
+    }),
+    vscode.commands.registerCommand('context-harvester.mcpStop', async () => {
+      await stopMcpServer();
+      await panelProvider.refreshState();
+    })
   );
 
   setupAutoIndex(context);
+  setupMcpAutoStart(context);
+}
+
+async function setupMcpAutoStart(context: vscode.ExtensionContext): Promise<void> {
+  const cfg = vscode.workspace.getConfiguration('contextHarvester');
+  if (!cfg.get<boolean>('enableMcpServer', false) || !cfg.get<boolean>('mcp.autoStart', false)) {
+    return;
+  }
+  try {
+    const pythonPath = await ensurePythonEnvironment(context);
+    await startMcpServer(context, pythonPath);
+  } catch {
+    /* optional */
+  }
+
+  context.subscriptions.push({
+    dispose: () => {
+      void stopMcpServer();
+    },
+  });
 }
 
 function setupAutoIndex(context: vscode.ExtensionContext): void {
@@ -134,4 +189,5 @@ export function deactivate(): void {
   if (saveDebounceTimer) {
     clearTimeout(saveDebounceTimer);
   }
+  void stopMcpServer();
 }

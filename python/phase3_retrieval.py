@@ -7,7 +7,7 @@ from typing import Any
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 
-from common import chroma_root, embed_text, emit_progress, get_ollama_client
+from common import chroma_root, embed_text, emit_progress, get_ollama_client, phase_model
 
 
 def _query_collection(col, embedding: list[float], n: int) -> list[dict[str, Any]]:
@@ -63,8 +63,8 @@ def run(config: dict[str, Any], hyde_snippets: list[str]) -> list[dict[str, Any]
     code_col = db.get_or_create_collection("code_index")
     docs_col = db.get_or_create_collection("docs_index")
 
-    client = get_ollama_client(config["ollamaUrl"])
-    model = config["embeddingModel"]
+    url, model = phase_model(config, "embedding")
+    client = get_ollama_client(url)
     top_k = int(config.get("topKBeforeRerank", 20))
     include_docs = config.get("includeDocsInRetrieval", False)
 

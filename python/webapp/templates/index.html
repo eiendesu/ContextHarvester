@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Context Harvester — Graph View</title>
+  <link rel="stylesheet" href="/vendor/vis-network/vis-network.min.css" />
+  <link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>🌾 Context Harvester — Graph View</h1>
+    <span id="status-line" class="muted">Caricamento...</span>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button type="button" class="tab active" data-tab="graph">🗺 Grafo</button>
+    <button type="button" class="tab" data-tab="impact">⚡ Impact</button>
+    <button type="button" class="tab" data-tab="analysis">🔍 Analisi</button>
+    <button type="button" class="tab" data-tab="functions">🏷 Funzionalità</button>
+  </nav>
+
+  <main>
+    <section id="panel-graph" class="panel active">
+      <div class="toolbar">
+        <input type="search" id="graph-search" placeholder="Cerca nodo o simbolo..." />
+        <button type="button" id="graph-search-btn" class="primary">🔍 Cerca</button>
+        <select id="graph-group-filter" title="Filtra per funzionalità mappata">
+          <option value="">Tutte le funzionalità</option>
+        </select>
+        <button type="button" id="graph-filter-reset">Reset filtri</button>
+        <button type="button" id="graph-fit">Fit all</button>
+      </div>
+      <div class="toolbar label-first-inline">
+        <span class="label-inline">Funzionalità da label:</span>
+        <input type="text" id="graph-lf-input" placeholder="pagina lista contratti" style="flex:1;min-width:12rem" />
+        <button type="button" id="graph-lf-search" class="primary">🔍 Cerca nel grafo</button>
+        <label class="muted">Depth <input type="number" id="graph-lf-depth" value="2" min="1" max="4" style="width:3rem" /></label>
+      </div>
+      <p id="graph-lf-status" class="muted small lf-status-inline"></p>
+      <div id="graph-network"></div>
+      <div id="graph-selection" class="selection-bar muted">Nessun nodo selezionato</div>
+    </section>
+
+    <section id="panel-impact" class="panel">
+      <div class="toolbar">
+        <label>Se modifico: <input type="text" id="impact-node" placeholder="LeadService o path file" /></label>
+        <button type="button" id="impact-run">Analizza</button>
+        <label>Max distanza: <input type="number" id="impact-depth" value="3" min="1" max="5" style="width:3rem" /></label>
+      </div>
+      <div id="impact-results" class="scroll-panel"></div>
+    </section>
+
+    <section id="panel-analysis" class="panel">
+      <div class="toolbar">
+        <button type="button" id="analysis-recalc">🔄 Ricalcola analisi</button>
+        <span id="analysis-meta" class="muted"></span>
+      </div>
+      <div id="analysis-sections" class="scroll-panel"></div>
+      <div id="analysis-info-modal" class="info-modal hidden" role="dialog" aria-modal="true" aria-labelledby="analysis-info-title">
+        <div class="info-modal-backdrop" id="analysis-info-backdrop"></div>
+        <div class="info-modal-box">
+          <h3 id="analysis-info-title"></h3>
+          <div id="analysis-info-body" class="info-modal-body"></div>
+          <button type="button" id="analysis-info-close" class="primary">Chiudi</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-functions" class="panel">
+      <div class="toolbar">
+        <input type="search" id="fn-filter" placeholder="Filtra funzionalità..." />
+        <button type="button" id="fn-refresh">Aggiorna</button>
+      </div>
+      <div id="fn-list" class="scroll-panel"></div>
+      <div class="label-first-box">
+        <h3>➕ Crea da label</h3>
+        <div class="toolbar">
+          <input type="text" id="lf-input" placeholder="pagina lista contratti" style="flex:1" />
+          <button type="button" id="lf-search">🔍 Cerca nel grafo</button>
+        </div>
+        <div class="toolbar">
+          <label>Depth <input type="number" id="lf-depth" value="2" min="1" max="4" style="width:3rem" /></label>
+          <label>Max nodi <input type="number" id="lf-max" value="100" min="10" max="300" style="width:4rem" /></label>
+        </div>
+        <p id="lf-status" class="muted"></p>
+        <label>Nome funzionalità <input type="text" id="lf-name" style="width:100%" /></label>
+        <ul id="lf-nodes" class="node-pick-list"></ul>
+        <button type="button" id="lf-save" class="primary" disabled>✅ Salva come funzionalità</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="/vendor/vis-network/vis-network.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

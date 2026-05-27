@@ -7,8 +7,25 @@
   <link rel="stylesheet" href="{{CSS_URI}}" />
 </head>
 <body>
+  <h1 class="app-title">🌾 Context Harvester <span class="version" id="app-version">—</span></h1>
+  <p id="app-build-meta" class="muted small build-meta">Build: —</p>
+
   <div id="banner-ollama" class="banner banner-error hidden"></div>
   <div id="banner-index" class="banner banner-warn hidden"></div>
+  <div id="banner-fingerprint" class="banner banner-info hidden"></div>
+
+  <section class="section" data-section="profile">
+    <header class="section-header" data-toggle="profile">
+      <span>PROFILO AI</span><span class="chevron">▲</span>
+    </header>
+    <div class="section-body" id="section-profile">
+      <select id="profile-select" class="select-full"></select>
+      <div class="btn-row">
+        <button id="btn-profile-new" class="btn ghost small">+ Nuovo</button>
+        <button id="btn-profile-delete" class="btn ghost small">🗑 Elimina</button>
+      </div>
+    </div>
+  </section>
 
   <section class="section" data-section="index">
     <header class="section-header" data-toggle="index">
@@ -16,16 +33,85 @@
     </header>
     <div class="section-body" id="section-index">
       <p id="index-status">Nessun index</p>
+      <p id="index-last-run" class="muted small"></p>
       <p id="index-files"></p>
+      <p id="index-symbols" class="muted small"></p>
       <label class="toggle-row">
         <span>Auto-index</span>
         <input type="checkbox" id="auto-index-toggle" disabled title="Configura in Settings" />
       </label>
-      <button id="btn-rebuild" class="btn secondary">🔄 Rebuild Index</button>
-      <button id="btn-reset" class="btn ghost">Reset Index</button>
+      <div class="btn-row">
+        <button id="btn-rebuild" class="btn secondary small">🔄 Rebuild</button>
+        <button id="btn-incremental" class="btn secondary small">⚡ Incrementale</button>
+        <button id="btn-reset" class="btn ghost small">Reset</button>
+      </div>
+      <button id="btn-exec-log" class="btn ghost small">🧾 Log esecuzione</button>
+      <button id="btn-exec-log-clear" class="btn ghost small">Pulisci log</button>
+      <div id="execution-log-section" class="execution-log hidden">
+        <p class="label">Log esecuzione</p>
+        <pre id="execution-log" class="execution-log-pre">(nessun log)</pre>
+      </div>
       <div id="progress-index" class="progress hidden">
         <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
         <p id="progress-text"></p>
+      </div>
+
+      <div id="index-timing-section" class="index-timing hidden">
+        <p class="label">Storico esecuzioni index</p>
+        <ul id="index-run-list" class="index-run-list"></ul>
+        <div id="index-run-detail" class="index-run-detail hidden">
+          <p id="index-run-detail-title" class="index-run-detail-title"></p>
+          <p id="index-run-detail-meta" class="muted small"></p>
+          <p class="label">Tempi per cartella (root repo)</p>
+          <table class="index-folder-table" id="index-folder-table">
+            <thead>
+              <tr>
+                <th>Cartella</th>
+                <th>Tempo</th>
+                <th>File</th>
+                <th>Indicizzati</th>
+                <th>Saltati</th>
+              </tr>
+            </thead>
+            <tbody id="index-folder-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" data-section="functional">
+    <header class="section-header" data-toggle="functional">
+      <span>FUNCTIONAL ANALYSIS</span><span class="chevron">▲</span>
+    </header>
+    <div class="section-body" id="section-functional">
+      <p id="functional-status" class="muted">Nessuna analisi</p>
+      <p id="functional-badges" class="muted small hidden"></p>
+      <div class="btn-row">
+        <button id="btn-graph-view" class="btn secondary small" disabled>📊 Apri Graph View</button>
+        <button id="btn-validate" class="btn secondary small" disabled>✅ Valida community</button>
+      </div>
+      <div class="btn-row">
+        <button id="btn-functional" class="btn secondary">🔄 Rigenera analisi</button>
+        <button id="btn-graph-report" class="btn ghost small" disabled>📄 Graph Report</button>
+      </div>
+      <div id="progress-functional" class="progress hidden">
+        <p id="progress-functional-text"><span class="spinner"></span> Analisi in corso...</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" data-section="mcp">
+    <header class="section-header" data-toggle="mcp">
+      <span>MCP SERVER</span><span class="chevron">▲</span>
+    </header>
+    <div class="section-body" id="section-mcp">
+      <p id="mcp-status" class="muted">● Non attivo</p>
+      <p id="mcp-last" class="muted small"></p>
+      <div class="btn-row">
+        <button id="btn-mcp-start" class="btn secondary small">▶ Avvia</button>
+        <button id="btn-mcp-stop" class="btn ghost small" disabled>⏹ Ferma</button>
+        <button id="btn-mcp-restart" class="btn ghost small" disabled>🔄 Riavvia</button>
       </div>
     </div>
   </section>
@@ -49,7 +135,7 @@
         <label><input type="checkbox" id="src-code" checked disabled /> Codice</label>
         <label><input type="checkbox" id="src-docs" /> Documentazione (.md)</label>
       </div>
-      <p class="label">FOCUS (opzionale)</p>
+      <p class="label">FOCUS <span class="muted">(auto da Query Understanding)</span></p>
       <div class="checkbox-row">
         <label><input type="checkbox" id="focus-backend" checked /> Backend</label>
         <label><input type="checkbox" id="focus-frontend" checked /> Frontend</label>
@@ -67,6 +153,11 @@
       <input type="text" id="card-id" placeholder="NED-123" />
       <p id="file-preview" class="muted">→ context.md</p>
       <p id="output-path" class="muted small"></p>
+      <p class="label">Export</p>
+      <div class="checkbox-row">
+        <label><input type="checkbox" id="export-json" /> JSON</label>
+        <label><input type="checkbox" id="export-txt" /> TXT</label>
+      </div>
     </div>
   </section>
 
@@ -79,7 +170,13 @@
   <section id="result-section" class="result hidden">
     <p id="result-title"></p>
     <p id="result-meta" class="muted"></p>
-    <button id="btn-open" class="btn secondary">📄 Apri in VS Code</button>
+    <div class="btn-row">
+      <button id="btn-open" class="btn secondary small">📄 Apri</button>
+      <button id="btn-copy" class="btn secondary small">📋 Copia</button>
+      <button id="btn-json" class="btn secondary small hidden">⬇ JSON</button>
+      <button id="btn-txt" class="btn secondary small hidden">⬇ TXT</button>
+    </div>
+    <button id="btn-project-context" class="btn ghost small">📄 Modifica Project Context</button>
   </section>
 
   <script src="{{JS_URI}}"></script>

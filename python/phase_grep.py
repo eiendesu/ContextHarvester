@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from common import emit_progress, iter_repo_files, load_vocabulary, rel_path
+from common import emit_progress, iter_repo_files, load_vocabulary, merge_exclude_folders, rel_path
 
 
 def _keywords_from_feature(feature: str, vocab: dict[str, list[str]]) -> list[str]:
@@ -84,6 +84,7 @@ def run(
     config: dict[str, Any],
     existing_chunks: list[dict[str, Any]],
     indexed_files: list[Path] | None = None,
+    search_hints: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     if not config.get("enableGrep", True):
         return []
@@ -93,10 +94,12 @@ def run(
     vocab = load_vocabulary(repo)
     feature = config.get("featureInput", "")
     keywords = _keywords_from_feature(feature, vocab)
+    if search_hints:
+        keywords = sorted(set(keywords + [h for h in search_hints if len(h) >= 2]))[:20]
     if not keywords:
         return []
 
-    exclude = config.get("excludeFolders", [])
+    exclude = merge_exclude_folders(config.get("excludeFolders"))
     existing_keys = {f"{c['file_path']}:{c['start_line']}" for c in existing_chunks}
 
     if indexed_files is None:

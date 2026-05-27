@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{CSP}}; script-src {{CSP}};" />
+  <link rel="stylesheet" href="{{CSS_URI}}" />
+</head>
+<body>
+  <h1 class="app-title">Harvester Lab <span class="version" id="app-version">—</span></h1>
+  <p id="app-build-meta" class="muted small build-meta">Build: —</p>
+
+  <section class="block">
+    <h2>Repo</h2>
+    <p id="repoPath" class="mono muted">—</p>
+    <p id="indexStatus" class="muted small">—</p>
+    <p id="cacheStatus" class="muted small">—</p>
+  </section>
+
+  <section class="block">
+    <h2>Input test</h2>
+    <label>Card ID</label>
+    <input type="text" id="cardId" placeholder="es. AUTH-001" />
+    <label>Feature / query</label>
+    <textarea id="featureInput" rows="3" placeholder="Descrivi la feature da testare…"></textarea>
+    <div class="checks">
+      <label><input type="checkbox" id="includeDocs" /> Docs in retrieval</label>
+      <label><input type="checkbox" id="enableConfidence" /> Confidence score</label>
+      <label><input type="checkbox" id="enableFunctionalAnalysis" /> Functional analysis auto</label>
+    </div>
+    <div class="checks">
+      <label><input type="checkbox" id="focusBackend" checked /> Backend</label>
+      <label><input type="checkbox" id="focusFrontend" checked /> Frontend</label>
+      <label><input type="checkbox" id="focusSql" checked /> SQL</label>
+      <label><input type="checkbox" id="incremental" /> Indice incrementale (phase1)</label>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Pipeline</h2>
+    <div class="btn-row">
+      <button class="btn primary" data-action="rebuild_index">Rebuild index</button>
+      <button class="btn" data-action="incremental_index">Reindex incrementale</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" data-action="generate_context">Genera contesto</button>
+      <button class="btn" data-action="check_fingerprint">Check fingerprint</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn" data-action="functional_analysis">Functional analysis</button>
+      <button class="btn" data-action="refresh_graph_viz">Refresh graph.json</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn accent" data-phase="pipeline_retrieval">Pipeline retrieval (no index)</button>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Singole fasi</h2>
+    <p class="muted small">Le fasi di retrieval usano <code>dev_lab_cache.json</code> per passare lo stato tra un passo e l’altro.</p>
+    <div id="phaseGroups"></div>
+  </section>
+
+  <section class="block">
+    <h2>Utilità</h2>
+    <div class="btn-row">
+      <button class="btn small" id="btnCheckOllama">Verifica Ollama</button>
+      <button class="btn small" id="btnOpenFolder">Cartella .context-harvester</button>
+      <button class="btn small danger" id="btnResetIndex">Reset indice</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn small" id="btnGraphView">Graph View</button>
+      <button class="btn small" id="btnValidate">Valida community</button>
+      <button class="btn small" id="btnGraphReport">GRAPH_REPORT.md</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn small" id="btnMcpStart">MCP start</button>
+      <button class="btn small" id="btnMcpStop">MCP stop</button>
+      <button class="btn small" id="btnMcpRestart">MCP restart</button>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Artefatti</h2>
+    <ul id="artifacts" class="artifact-list"></ul>
+  </section>
+
+  <section class="block log-block">
+    <div class="log-header">
+      <h2>Log</h2>
+      <button class="btn tiny" id="btnClearLog">Pulisci</button>
+    </div>
+    <pre id="log" class="log"></pre>
+  </section>
+
+  <div id="overlay" class="overlay hidden">
+    <span>Esecuzione in corso…</span>
+  </div>
+
+  <script src="{{JS_URI}}"></script>
+</body>
+</html>

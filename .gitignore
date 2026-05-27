@@ -151,3 +151,4 @@ python/.venv/
 *.pyc
 __pycache__/
 python/config_temp*.json
+media/build-info.json

@@ -3,14 +3,34 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { IndexRunRecord } from './indexRunHistory';
 import { HarvesterConfig } from './settings';
+import { HarvesterProfile, profileModelsForCheck } from './profiles';
 
 export type OrchestratorEvent =
   | { event: 'progress'; phase: string; message: string; current?: number; total?: number }
-  | { event: 'done'; outputFile?: string; chunksCount?: number; depsCount?: number }
+  | {
+      event: 'done';
+      outputFile?: string;
+      jsonFile?: string;
+      txtFile?: string;
+      chunksCount?: number;
+      depsCount?: number;
+      testsCount?: number;
+      confidenceScore?: number;
+      fingerprint?: string;
+      phase?: string;
+      message?: string;
+      cacheSummary?: Record<string, unknown>;
+      reportPath?: string;
+      path?: string;
+      indexRun?: IndexRunRecord;
+    }
+  | { event: 'fingerprint'; status: string; previous?: Record<string, unknown> }
   | { event: 'error'; message: string };
 
 export type EventHandler = (ev: OrchestratorEvent) => void;
+export type RunLogHandler = (line: string) => void;
 
 const PYTHON_STATE_KEY = 'contextHarvester.pythonPath';
 
@@ -89,8 +109,16 @@ export async function runOrchestrator(
   pythonPath: string,
   extensionPath: string,
   config: HarvesterConfig,
-  action: 'rebuild_index' | 'generate_context' | 'incremental_index',
-  onEvent: EventHandler
+  action:
+    | 'rebuild_index'
+    | 'generate_context'
+    | 'incremental_index'
+    | 'check_fingerprint'
+    | 'functional_analysis'
+    | 'refresh_graph_viz'
+    | 'dev_run_phase',
+  onEvent: EventHandler,
+  onLog?: RunLogHandler
 ): Promise<void> {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ch-config-'));
   const configPath = path.join(tmpDir, 'config.json');
@@ -99,6 +127,8 @@ export async function runOrchestrator(
   const orchestrator = path.join(extensionPath, 'python', 'orchestrator.py');
 
   return new Promise((resolve, reject) => {
+    onLog?.(`[run] action=${action}`);
+    onLog?.(`[run] python=${pythonPath}`);
     const proc = spawn(
       pythonPath,
       [orchestrator, '--config', configPath, '--action', action],
@@ -122,7 +152,7 @@ export async function runOrchestrator(
           reject(new Error(ev.message));
         }
       } catch {
-        /* non-JSON log line */
+        onLog?.(`[stdout] ${trimmed}`);
       }
     };
 
@@ -136,6 +166,7 @@ export async function runOrchestrator(
     proc.stderr?.on('data', (chunk) => {
       const text = chunk.toString().trim();
       if (text) {
+        onLog?.(`[stderr] ${text}`);
         console.error('[ContextHarvester]', text);
       }
     });
@@ -159,30 +190,72 @@ export async function runOrchestrator(
   });
 }
 
+export async function checkOllamaForProfile(profile?: HarvesterProfile): Promise<{
+  reachable: boolean;
+  models: string[];
+  missingModels: string[];
+  required: string[];
+  urls: string[];
+}> {
+  const phases = profile
+    ? profileModelsForCheck(profile)
+    : [
+        {
+          url: vscode.workspace.getConfiguration('contextHarvester').get('ollamaUrl', 'http://localhost:11434'),
+          model: vscode.workspace.getConfiguration('contextHarvester').get('embeddingModel', 'nomic-embed-text'),
+        },
+        {
+          url: vscode.workspace.getConfiguration('contextHarvester').get('ollamaUrl', 'http://localhost:11434'),
+          model: vscode.workspace.getConfiguration('contextHarvester').get('hydeModel', 'qwen3:8b'),
+        },
+      ];
+
+  const required = phases.map((p) => p.model).filter(Boolean);
+  const urls = [...new Set(phases.map((p) => p.url.replace(/\/$/, '')))];
+  const allModels: string[] = [];
+  const missingModels: string[] = [];
+  let reachable = true;
+
+  for (const url of urls) {
+    try {
+      const res = await fetch(`${url}/api/tags`);
+      if (!res.ok) {
+        reachable = false;
+        continue;
+      }
+      const data = (await res.json()) as { models?: { name: string }[] };
+      const names = (data.models ?? []).map((m) => m.name);
+      allModels.push(...names);
+      for (const phase of phases.filter((p) => p.url.replace(/\/$/, '') === url)) {
+        if (!phase.model) {
+          continue;
+        }
+        const found = names.some(
+          (n) => n === phase.model || n.startsWith(`${phase.model}:`) || n.startsWith(phase.model)
+        );
+        if (!found && !missingModels.includes(phase.model)) {
+          missingModels.push(phase.model);
+        }
+      }
+    } catch {
+      reachable = false;
+    }
+  }
+
+  if (!reachable && missingModels.length === 0) {
+    return { reachable: false, models: allModels, missingModels: required, required, urls };
+  }
+
+  return { reachable, models: allModels, missingModels, required, urls };
+}
+
+/** @deprecated Use checkOllamaForProfile */
 export async function checkOllama(url: string): Promise<{
   reachable: boolean;
   models: string[];
   missingModels: string[];
   required: string[];
 }> {
-  const required = [
-    vscode.workspace.getConfiguration('contextHarvester').get('embeddingModel', 'nomic-embed-text'),
-    vscode.workspace.getConfiguration('contextHarvester').get('hydeModel', 'qwen2.5:3b'),
-  ] as string[];
-
-  try {
-    const res = await fetch(`${url.replace(/\/$/, '')}/api/tags`);
-    if (!res.ok) {
-      return { reachable: false, models: [], missingModels: required, required };
-    }
-    const data = (await res.json()) as { models?: { name: string }[] };
-    const models = (data.models ?? []).map((m) => m.name.split(':')[0] === m.name ? m.name : m.name);
-    const names = (data.models ?? []).map((m) => m.name);
-    const missingModels = required.filter(
-      (r) => !names.some((n) => n === r || n.startsWith(`${r}:`) || n.startsWith(r))
-    );
-    return { reachable: true, models: names, missingModels, required };
-  } catch {
-    return { reachable: false, models: [], missingModels: required, required };
-  }
+  const r = await checkOllamaForProfile();
+  return { reachable: r.reachable, models: r.models, missingModels: r.missingModels, required: r.required };
 }

@@ -2,8 +2,17 @@
   "name": "context-harvester",
   "displayName": "Context Harvester",
   "description": "Semantic codebase search in locale con Ollama — genera file context per feature.",
-  "version": "0.1.0",
+  "version": "0.3.0",
+  "license": "SEE LICENSE IN LICENSE",
   "publisher": "context-harvester",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eiendesu/ContextHarvester.git"
+  },
+  "bugs": {
+    "url": "https://github.com/eiendesu/ContextHarvester/issues"
+  },
+  "homepage": "https://github.com/eiendesu/ContextHarvester#readme",
   "engines": {
     "vscode": "^1.96.0"
   },
@@ -28,6 +37,11 @@
         "category": "Context Harvester"
       },
       {
+        "command": "context-harvester.openDevLab",
+        "title": "Context Harvester: Apri Harvester Lab (test)",
+        "category": "Context Harvester"
+      },
+      {
         "command": "context-harvester.openLastContext",
         "title": "Context Harvester: Apri ultimo context",
         "category": "Context Harvester"
@@ -40,6 +54,36 @@
       {
         "command": "context-harvester.resetIndex",
         "title": "Context Harvester: Reset Index",
+        "category": "Context Harvester"
+      },
+      {
+        "command": "context-harvester.showExecutionLog",
+        "title": "Context Harvester: Log esecuzione",
+        "category": "Context Harvester"
+      },
+      {
+        "command": "context-harvester.functionalAnalysis",
+        "title": "Context Harvester: Functional Analysis (v3)",
+        "category": "Context Harvester"
+      },
+      {
+        "command": "context-harvester.openGraphView",
+        "title": "Context Harvester: Open Graph View (Layer 3)",
+        "category": "Context Harvester"
+      },
+      {
+        "command": "context-harvester.validateCommunities",
+        "title": "Context Harvester: Valida community",
+        "category": "Context Harvester"
+      },
+      {
+        "command": "context-harvester.mcpStart",
+        "title": "Context Harvester: Avvia MCP Server",
+        "category": "Context Harvester"
+      },
+      {
+        "command": "context-harvester.mcpStop",
+        "title": "Context Harvester: Ferma MCP Server",
         "category": "Context Harvester"
       }
     ],
@@ -58,6 +102,11 @@
           "type": "webview",
           "id": "context-harvester.panel",
           "name": "Context Harvester"
+        },
+        {
+          "type": "webview",
+          "id": "context-harvester.dev-lab",
+          "name": "Harvester Lab"
         }
       ]
     },
@@ -79,25 +128,94 @@
           "default": "{CARD}_context",
           "description": "Template nome file output ({CARD} = card ID)."
         },
+        "contextHarvester.activeProfile": {
+          "type": "string",
+          "default": "laptop-balanced",
+          "description": "Profilo AI attivo."
+        },
         "contextHarvester.ollamaUrl": {
           "type": "string",
           "default": "http://localhost:11434",
-          "description": "URL base Ollama."
+          "description": "URL base Ollama (legacy, usato se ollama.*.url non impostato)."
         },
         "contextHarvester.embeddingModel": {
           "type": "string",
           "default": "nomic-embed-text",
-          "description": "Modello embedding Ollama."
+          "description": "Modello embedding Ollama (legacy)."
         },
         "contextHarvester.hydeModel": {
           "type": "string",
-          "default": "qwen2.5:3b",
-          "description": "Modello HyDE query expansion."
+          "default": "qwen3:8b",
+          "description": "Modello HyDE (legacy)."
         },
         "contextHarvester.rerankModel": {
           "type": "string",
-          "default": "bge-reranker-base",
-          "description": "Modello re-ranking (fallback su hydeModel se non disponibile)."
+          "default": "qwen3:8b",
+          "description": "Modello re-ranking LLM (legacy; stesso tipo di HyDE, non un reranker embedding)."
+        },
+        "contextHarvester.ollama.embedding.url": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "URL Ollama per embedding."
+        },
+        "contextHarvester.ollama.embedding.model": {
+          "type": "string",
+          "default": "nomic-embed-text"
+        },
+        "contextHarvester.ollama.hyde.url": {
+          "type": "string",
+          "default": "http://localhost:11434"
+        },
+        "contextHarvester.ollama.hyde.model": {
+          "type": "string",
+          "default": "qwen3:8b"
+        },
+        "contextHarvester.ollama.rerank.url": {
+          "type": "string",
+          "default": "http://localhost:11434"
+        },
+        "contextHarvester.ollama.rerank.model": {
+          "type": "string",
+          "default": "qwen3:8b"
+        },
+        "contextHarvester.ollama.classifier.url": {
+          "type": "string",
+          "default": "http://localhost:11434"
+        },
+        "contextHarvester.ollama.classifier.model": {
+          "type": "string",
+          "default": "qwen3:8b"
+        },
+        "contextHarvester.ollama.structurer.url": {
+          "type": "string",
+          "default": "http://localhost:11434"
+        },
+        "contextHarvester.ollama.structurer.model": {
+          "type": "string",
+          "default": "qwen3:8b"
+        },
+        "contextHarvester.ollama.confidence.url": {
+          "type": "string",
+          "default": "http://localhost:11434"
+        },
+        "contextHarvester.ollama.confidence.model": {
+          "type": "string",
+          "default": "qwen3:8b"
+        },
+        "contextHarvester.enableConfidenceScore": {
+          "type": "boolean",
+          "default": false,
+          "description": "Abilita Confidence Score opzionale in fase di generazione."
+        },
+        "contextHarvester.exportJson": {
+          "type": "boolean",
+          "default": false,
+          "description": "Esporta anche JSON strutturato."
+        },
+        "contextHarvester.exportTxt": {
+          "type": "boolean",
+          "default": false,
+          "description": "Esporta anche plain text."
         },
         "contextHarvester.includeExtensions": {
           "type": "array",
@@ -113,7 +231,7 @@
         "contextHarvester.excludeFolders": {
           "type": "array",
           "items": { "type": "string" },
-          "default": ["bin", "obj", "node_modules", ".git", "dist", ".context-harvester", "packages", ".vs", "TestResults"]
+          "default": ["bin", "obj", "node_modules", ".git", "dist", "build", ".context-harvester", "packages", ".vs", "TestResults"]
         },
         "contextHarvester.docExtensions": {
           "type": "array",
@@ -165,6 +283,105 @@
         "contextHarvester.includeDocsInRetrieval": {
           "type": "boolean",
           "default": false
+        },
+        "contextHarvester.enableFunctionalAnalysis": {
+          "type": "boolean",
+          "default": false,
+          "description": "Layer 2 — genera functional_map.json e knowledge graph file→file."
+        },
+        "contextHarvester.graph.minCommunitySize": {
+          "type": "number",
+          "default": 3,
+          "minimum": 2
+        },
+        "contextHarvester.graph.maxCommunitySize": {
+          "type": "number",
+          "default": 50,
+          "minimum": 5
+        },
+        "contextHarvester.graph.autoValidate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Se true, salta UI validazione e marca subito le communities come validate."
+        },
+        "contextHarvester.graph.normalizeNodeNames": {
+          "type": "boolean",
+          "default": true,
+          "description": "v4 — lookup nomi classe → file per edge e label grafo."
+        },
+        "contextHarvester.graph.reassignUnassigned": {
+          "type": "boolean",
+          "default": true,
+          "description": "v4 — riassegna nodi singleton al vicino più connesso dopo Leiden."
+        },
+        "contextHarvester.graph.minDegreeForReassign": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0
+        },
+        "contextHarvester.graph.labelFirst.traversalDepth": {
+          "type": "number",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 5
+        },
+        "contextHarvester.graph.labelFirst.maxNodes": {
+          "type": "number",
+          "default": 100,
+          "minimum": 10
+        },
+        "contextHarvester.ollama.labelExpansion.url": {
+          "type": "string",
+          "default": "http://localhost:11434"
+        },
+        "contextHarvester.ollama.labelExpansion.model": {
+          "type": "string",
+          "default": "qwen3:4b"
+        },
+        "contextHarvester.webapp.autoOpenBrowser": {
+          "type": "boolean",
+          "default": true,
+          "description": "Apri Graph View nel browser di sistema."
+        },
+        "contextHarvester.analysis.gitLogDays": {
+          "type": "number",
+          "default": 90
+        },
+        "contextHarvester.analysis.functionSimilarityThreshold": {
+          "type": "number",
+          "default": 0.3
+        },
+        "contextHarvester.analysis.entryPointPatterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["Controller", "Program.cs", "Startup.cs", "Page.tsx", "App.tsx", "index.ts"]
+        },
+        "contextHarvester.analysis.apiEdgePatterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["fetch", "axios"]
+        },
+        "contextHarvester.enableGraphView": {
+          "type": "boolean",
+          "default": false,
+          "description": "Layer 3 — abilita visualizzazione knowledge graph."
+        },
+        "contextHarvester.enableMcpServer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Layer 4 — abilita MCP server locale."
+        },
+        "contextHarvester.mcp.port": {
+          "type": "number",
+          "default": 3456,
+          "minimum": 1024,
+          "maximum": 65535,
+          "description": "Porta HTTP del MCP server."
+        },
+        "contextHarvester.mcp.autoStart": {
+          "type": "boolean",
+          "default": false,
+          "description": "Avvia MCP server all'apertura di VS Code (richiede enableMcpServer)."
         },
         "contextHarvester.autoIndex": {
           "type": "boolean",

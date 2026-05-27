@@ -3,15 +3,41 @@ from __future__ import annotations
 
 from typing import Any
 
-from common import emit_progress, get_ollama_client, load_vocabulary, ollama_generate
+import json
+from pathlib import Path
+
+from common import emit_progress, get_ollama_client, harvester_root, load_vocabulary, ollama_generate, phase_model
 
 
-def run(config: dict[str, Any]) -> list[str]:
+def run(config: dict[str, Any], query_analysis: dict[str, Any] | None = None) -> list[str]:
     repo_path = config["repoPath"]
     vocab = load_vocabulary(repo_path)
     feature = config.get("featureInput", "")
-    client = get_ollama_client(config["ollamaUrl"])
-    model = config.get("hydeModel", "qwen2.5:3b")
+    if query_analysis:
+        hints = query_analysis.get("search_hints") or []
+        if hints:
+            feature = f"{feature}\n\nTermini chiave: {', '.join(hints)}"
+
+        related_function = query_analysis.get("related_function")
+        if related_function:
+            try:
+                fmap_path = harvester_root(Path(repo_path).resolve()) / "functional_map.json"
+                if fmap_path.exists():
+                    fmap = json.loads(fmap_path.read_text(encoding="utf-8"))
+                    funcs = fmap.get("functions") or []
+                    fn = next((f for f in funcs if isinstance(f, dict) and f.get("validated") and str(f.get("id")) == str(related_function)), None)
+                    if fn and isinstance(fn.get("terms"), dict):
+                        dc = fn["terms"].get("domainConcepts") or []
+                        if dc:
+                            dc_list = [t for t in dc if isinstance(t, str)]
+                            feature = (
+                                f"{feature}\n\nFunzionalità target: {fn.get('name','')}\n"
+                                f"Termini funzionali: {', '.join(dc_list[:40])}"
+                            )
+            except Exception:
+                pass
+    url, model = phase_model(config, "hyde")
+    client = get_ollama_client(url)
     multi = config.get("multiQueryHyde", True)
 
     snippets: list[str] = []
