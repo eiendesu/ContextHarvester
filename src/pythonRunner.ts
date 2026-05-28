@@ -116,7 +116,8 @@ export async function runOrchestrator(
     | 'check_fingerprint'
     | 'functional_analysis'
     | 'refresh_graph_viz'
-    | 'dev_run_phase',
+    | 'dev_run_phase'
+    | 'roslyn_scan',
   onEvent: EventHandler,
   onLog?: RunLogHandler
 ): Promise<void> {

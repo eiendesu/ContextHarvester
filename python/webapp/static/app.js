@@ -31,16 +31,20 @@
       }
       if (tab === 'analysis') loadAnalysis(false);
       if (tab === 'functions') loadFunctions();
+      if (tab === 'symbols' && window.chSymbolsView?.load) window.chSymbolsView.load(false);
     });
   });
 
-  async function api(path, opts) {
+  async function api(path, opts, label) {
+    if (window.chProgress?.fetchJson) {
+      return window.chProgress.fetchJson(path, opts, label);
+    }
     const res = await fetch(path, opts);
     return res.json();
   }
 
   async function loadStatus() {
-    const st = await api('/api/status');
+    const st = await api('/api/status', undefined, 'Stato repository');
     $('status-line').textContent =
       `${st.functionsCount || 0} funzioni · ${st.graph?.nodes || 0} nodi · ${st.graph?.edges || 0} edge`;
     return st;
@@ -65,7 +69,7 @@
   }
 
   async function loadGraph() {
-    graphData = await api('/api/graph');
+    graphData = await api('/api/graph', undefined, 'Grafo funzionale');
     populateGroupFilter(graphData.groups);
     initNetwork();
   }
@@ -196,11 +200,10 @@
     const mode = $('impact-mode')?.value || 'transitive';
     const useV2 = $('impact-v2')?.checked;
     const crossLayer = $('impact-cross-layer')?.checked;
-    $('impact-results').innerHTML = '<p class="muted">Calcolo...</p>';
     const url = useV2
       ? `/api/graph/impact-v2/${encodeURIComponent(node)}?max_depth=${depth}&direction=${direction}&mode=${mode}&cross_layer=${crossLayer}`
       : `/api/graph/impact/${encodeURIComponent(node)}?max_depth=${depth}`;
-    const data = await api(url);
+    const data = await api(url, undefined, 'Analisi impatto');
     if (data.error) {
       $('impact-results').innerHTML = `<p>${escapeHtml(data.error)}</p>`;
       return;
@@ -281,8 +284,11 @@
 
   // Analysis
   async function loadAnalysis(recalc) {
-    $('analysis-sections').innerHTML = '<p class="muted">Caricamento...</p>';
-    const data = await api(`/api/graph/analysis${recalc ? '?recalculate=true' : ''}`);
+    const data = await api(
+      `/api/graph/analysis${recalc ? '?recalculate=true' : ''}`,
+      undefined,
+      recalc ? 'Ricalcolo analisi' : 'Analisi grafo'
+    );
     $('analysis-meta').textContent = data.analyzedAt ? `Ultima: ${data.analyzedAt}` : '';
     const sections = [
       { id: 'deadCode', title: '🔴 Dead Code', items: data.deadCode, fmt: (x) => `${escapeHtml(x.label)} — <code>${escapeHtml(x.file)}</code>` },
@@ -341,7 +347,7 @@
 
   // Functions list
   async function loadFunctions() {
-    const fmap = await api('/api/functions');
+    const fmap = await api('/api/functions', undefined, 'Elenco funzionalità');
     const filter = ($('fn-filter').value || '').toLowerCase();
     const funcs = (fmap.functions || [])
       .filter((f) => f.validated !== false)
@@ -428,11 +434,12 @@
     } else {
       $('lf-input').value = input;
     }
-    statusEl.textContent = 'Ricerca in corso...';
     const depth = parseInt(depthEl?.value || $('lf-depth')?.value || '2', 10);
     const maxNodes = parseInt($('lf-max')?.value || '100', 10);
+    const lfProgress = window.chProgress?.begin('Label-first: ricerca…');
 
     const finish = (msg) => {
+      if (lfProgress) lfProgress.end();
       if (msg.error) {
         statusEl.textContent = msg.error;
         return;
@@ -461,44 +468,67 @@
       };
       ws.onmessage = (ev) => {
         const msg = JSON.parse(ev.data);
-        if (msg.stage === 'expansion_done') statusEl.textContent = 'Espansione query...';
-        if (msg.stage === 'seeds_done') statusEl.textContent = `Seed trovati: ${(msg.seeds || []).length}`;
-        if (msg.stage === 'traverse') statusEl.textContent = msg.message || 'Traversal grafo...';
+        if (msg.stage === 'expansion_done') {
+          statusEl.textContent = 'Espansione query...';
+          lfProgress?.set(25, 'Label-first: espansione query');
+        }
+        if (msg.stage === 'seeds_done') {
+          statusEl.textContent = `Seed trovati: ${(msg.seeds || []).length}`;
+          lfProgress?.set(50, 'Label-first: seed trovati');
+        }
+        if (msg.stage === 'traverse') {
+          statusEl.textContent = msg.message || 'Traversal grafo...';
+          lfProgress?.set(70, msg.message || 'Label-first: traversal');
+        }
         if (msg.stage === 'done') {
           settled = true;
+          lfProgress?.set(100, 'Label-first completato');
           finish(msg);
           ws.close();
         }
         if (msg.stage === 'error') {
           settled = true;
           statusEl.textContent = msg.message || 'Errore';
+          lfProgress?.end();
           ws.close();
         }
       };
       ws.onerror = () => {
         if (settled) return;
-        api('/api/graph/label-first', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ input, depth, maxNodes }),
-        }).then(finish);
+        api(
+          '/api/graph/label-first',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ input, depth, maxNodes }),
+          },
+          'Label-first'
+        ).then(finish);
+      };
+      ws.onclose = () => {
+        if (!settled && lfProgress) lfProgress.end();
       };
     } catch (e) {
+      if (lfProgress) lfProgress.end();
       statusEl.textContent = String(e);
     }
   }
 
   $('lf-save').addEventListener('click', async () => {
-    const res = await api('/api/graph/label-first/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: $('lf-name').value.trim(),
-        labelInput: $('lf-input').value.trim(),
-        nodes: [...labelFirstNodes],
-        traversalDepth: parseInt($('lf-depth').value, 10),
-      }),
-    });
+    const res = await api(
+      '/api/graph/label-first/save',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: $('lf-name').value.trim(),
+          labelInput: $('lf-input').value.trim(),
+          nodes: [...labelFirstNodes],
+          traversalDepth: parseInt($('lf-depth').value, 10),
+        }),
+      },
+      'Salvataggio funzionalità'
+    );
     if (res.error) {
       $('lf-status').textContent = res.error;
       return;
@@ -512,11 +542,17 @@
   });
 
   async function init() {
-    await loadStatus();
-    await loadGraph();
-    await loadFunctions();
-    if (window.chSigmaView?.loadFileView) {
-      window.chSigmaView.loadFileView();
+    const boot = window.chProgress?.begin('Avvio Graph View');
+    try {
+      await loadStatus();
+      await loadGraph();
+      await loadFunctions();
+      if (window.chSigmaView?.loadFileView) {
+        await window.chSigmaView.loadFileView();
+      }
+      boot?.set(100, 'Pronto');
+    } finally {
+      boot?.end();
     }
   }
 

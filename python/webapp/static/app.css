@@ -310,6 +310,70 @@ main { flex: 1; min-height: 0; position: relative; }
   max-height: 120px;
   overflow: auto;
 }
+.sym-list-wrap {
+  flex: 1;
+  min-height: 0;
+}
+.sym-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.sym-table th {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  z-index: 1;
+}
+.sym-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid #333;
+  vertical-align: middle;
+}
+.sym-table tbody tr {
+  cursor: pointer;
+}
+.sym-table tbody tr:hover {
+  background: #2a2d30;
+}
+.sym-name {
+  font-weight: 500;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sym-file code {
+  font-size: 11px;
+  color: var(--muted);
+}
+.sym-line {
+  width: 3rem;
+  text-align: right;
+  color: var(--muted);
+}
+.sym-open-btn {
+  padding: 2px 6px;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--accent);
+}
+.sym-open-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+.badge.sym-type-method { background: #2a4a6a; }
+.badge.sym-type-class { background: #3a3a5a; }
+.badge.sym-type-dto { background: #4a3a5a; }
+.badge.sym-type-api_endpoint { background: #1a5a55; }
+.badge.sym-type-api_client_method { background: #5a4a1a; }
+.badge.sym-type-interface { background: #3a4a3a; }
+
 .path-result .path-hop {
   display: inline-block;
   padding: 2px 6px;
@@ -317,4 +381,44 @@ main { flex: 1; min-height: 0; position: relative; }
   background: #2a3a4a;
   border-radius: 3px;
   font-size: 11px;
+}
+
+/* Barra avanzamento globale */
+.ch-progress {
+  flex-shrink: 0;
+  padding: 4px 16px 6px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.ch-progress.hidden {
+  display: none;
+}
+.ch-progress-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ch-progress-track {
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.ch-progress-bar {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.15s ease-out;
+}
+.ch-progress-bar.indeterminate {
+  width: 35% !important;
+  animation: ch-progress-slide 1.1s ease-in-out infinite;
+}
+@keyframes ch-progress-slide {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
 }

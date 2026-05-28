@@ -225,6 +225,7 @@ def main() -> int:
             "functional_analysis",
             "refresh_graph_viz",
             "dev_run_phase",
+            "roslyn_scan",
         ],
     )
     args = parser.parse_args()
@@ -260,6 +261,11 @@ def main() -> int:
 
             phase = config.get("devPhase") or ""
             out = run_phase(config, phase)
+            emit({"event": "done", **out})
+        elif args.action == "roslyn_scan":
+            import roslyn_scan
+
+            out = roslyn_scan.run(config)
             emit({"event": "done", **out})
         return 0
     except Exception as e:

@@ -13,9 +13,17 @@
     <span id="status-line" class="muted">Caricamento...</span>
   </header>
 
+  <div id="ch-progress" class="ch-progress hidden" role="status" aria-live="polite" aria-hidden="true">
+    <div id="ch-progress-label" class="ch-progress-label"></div>
+    <div class="ch-progress-track" aria-hidden="true">
+      <div id="ch-progress-bar" class="ch-progress-bar indeterminate"></div>
+    </div>
+  </div>
+
   <nav class="tabs" id="tabs">
     <button type="button" class="tab" data-tab="graph">🗺 Grafo (legacy)</button>
     <button type="button" class="tab active" data-tab="sigma">◈ Grafo</button>
+    <button type="button" class="tab" data-tab="symbols">⌕ Simboli</button>
     <button type="button" class="tab" data-tab="impact">⚡ Impact</button>
     <button type="button" class="tab" data-tab="analysis">🔍 Analisi</button>
     <button type="button" class="tab" data-tab="functions">🏷 Funzionalità</button>
@@ -41,6 +49,41 @@
       <p id="graph-lf-status" class="muted small lf-status-inline"></p>
       <div id="graph-network"></div>
       <div id="graph-selection" class="selection-bar muted">Nessun nodo selezionato</div>
+    </section>
+
+    <section id="panel-symbols" class="panel">
+      <div class="toolbar sym-toolbar">
+        <input type="search" id="sym-search" placeholder="Filtra per nome, file, tipo…" style="flex:1;min-width:14rem" />
+        <button type="button" id="sym-refresh">Aggiorna</button>
+        <label class="muted">Tipo
+          <select id="sym-type-filter">
+            <option value="">Tutti</option>
+            <option value="method">Metodi</option>
+            <option value="class">Classi</option>
+            <option value="dto">DTO</option>
+            <option value="api_endpoint">Endpoint</option>
+            <option value="api_client_method">API client</option>
+            <option value="interface">Interfacce</option>
+          </select>
+        </label>
+      </div>
+      <p id="sym-meta" class="muted small"></p>
+      <p class="muted small">Metodi/classi estratti dal codice (non un simbolo per ogni file). Dopo Rebuild Index con Roslyn (.NET SDK) il conteggio C# migliora.</p>
+      <div id="sym-list-wrap" class="scroll-panel sym-list-wrap">
+        <table class="sym-table" id="sym-table">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Nome</th>
+              <th>File</th>
+              <th>Riga</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="sym-tbody"></tbody>
+        </table>
+        <p id="sym-empty" class="muted hidden">Nessun simbolo trovato.</p>
+      </div>
     </section>
 
     <section id="panel-impact" class="panel">
@@ -106,12 +149,15 @@
         <input type="search" id="sigma-search" placeholder="Cerca file, metodo, DTO, endpoint (min 2 char per full detail)..." style="flex:1;min-width:12rem" />
         <button type="button" id="sigma-search-btn" class="primary">Cerca</button>
         <button type="button" id="sigma-fit">Fit</button>
+        <button type="button" id="sigma-reset" title="Vista file iniziale, senza filtri">Reset</button>
         <button type="button" id="sigma-collapse" disabled>◁ File view</button>
         <button type="button" id="sigma-full-detail">Full detail</button>
       </div>
       <div class="toolbar sigma-filters">
         <label>Peso min <input type="number" id="sigma-min-weight" value="0" min="0" max="5" step="0.1" style="width:3rem" /></label>
-        <label>Max nodi <input type="number" id="sigma-max-nodes" value="400" min="50" max="2000" style="width:4rem" /></label>
+        <label title="0 = tutti i nodi (default). Max 100000.">Max nodi <input type="number" id="sigma-max-nodes" value="0" min="0" max="100000" step="100" style="width:5.5rem" /></label>
+        <label><input type="checkbox" id="sigma-show-labels" checked /> Etichette</label>
+        <label><input type="checkbox" id="sigma-show-edges" checked /> Archi</label>
         <label><input type="checkbox" id="sigma-hide-private" checked /> Nascondi private</label>
         <label><input type="checkbox" data-sigma-type="method" checked /> Metodi</label>
         <label><input type="checkbox" data-sigma-type="dto" checked /> DTO</label>
@@ -138,9 +184,11 @@
   </main>
 
   <script src="/vendor/vis-network/vis-network.min.js"></script>
-  <script src="https://unpkg.com/graphology@0.25.4/dist/graphology.umd.min.js"></script>
-  <script src="https://unpkg.com/sigma@2.4.0/dist/sigma.min.js"></script>
+  <script src="/vendor/sigma/graphology.umd.min.js"></script>
+  <script src="/vendor/sigma/sigma.min.js"></script>
+  <script src="/static/progress.js"></script>
   <script src="/static/app.js"></script>
+  <script src="/static/symbols-view.js"></script>
   <script src="/static/sigma-view.js"></script>
 </body>
 </html>

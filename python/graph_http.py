@@ -52,6 +52,10 @@ def create_http_app(mcp_app=None) -> FastAPI:
     if vendor_vis.is_dir():
         app.mount("/vendor/vis-network", StaticFiles(directory=str(vendor_vis)), name="vis-vendor")
 
+    vendor_sigma = root.parent / "webview" / "vendor" / "sigma"
+    if vendor_sigma.is_dir():
+        app.mount("/vendor/sigma", StaticFiles(directory=str(vendor_sigma)), name="sigma-vendor")
+
     @app.get("/api/graph")
     async def api_graph():
         from functional_map import build_groups_metadata, group_label_for_id, load as load_fmap
@@ -139,6 +143,19 @@ def create_http_app(mcp_app=None) -> FastAPI:
         from graph_v2 import search_nodes_v2
 
         return JSONResponse({"results": search_nodes_v2(_repo(), q, node_type=node_type, limit=limit)})
+
+    @app.get("/api/symbols")
+    async def api_symbols(
+        q: str = "",
+        type: str = "",
+        limit: int = 0,
+        offset: int = 0,
+    ):
+        from symbol_catalog import search_symbols
+
+        return JSONResponse(
+            search_symbols(_repo(), q=q, type_filter=type, limit=limit, offset=offset)
+        )
 
     @app.get("/api/graph/path")
     async def api_graph_path(

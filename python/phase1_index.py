@@ -196,6 +196,11 @@ def run(config: dict[str, Any]) -> dict[str, Any]:
             )
 
     all_hashes = {**code_hashes, **doc_hashes}
+
+    from roslyn_bridge import clear_roslyn_scan_cache
+
+    clear_roslyn_scan_cache()
+
     if tracker:
         with tracker.phase("symbol_index"):
             sym_index = symbol_index.build_symbol_index(config)

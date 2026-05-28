@@ -9,6 +9,14 @@ from typing import Any
 
 _TOOL_DIR = Path(__file__).resolve().parent.parent / "tools" / "RoslynHarvester"
 
+_scan_cache: dict[str, dict[str, Any] | None] = {}
+_persisted_repo_keys: set[str] = set()
+
+
+def clear_roslyn_scan_cache() -> None:
+    _scan_cache.clear()
+    _persisted_repo_keys.clear()
+
 
 def _dotnet_available() -> bool:
     try:
@@ -18,8 +26,7 @@ def _dotnet_available() -> bool:
         return False
 
 
-def run_roslyn_scan(repo: Path, timeout_s: int = 300) -> dict[str, Any] | None:
-    """Return parsed JSON from RoslynHarvester or None if unavailable."""
+def _execute_roslyn_scan(repo: Path, timeout_s: int = 300) -> dict[str, Any] | None:
     if not _dotnet_available():
         return None
     if not _TOOL_DIR.is_dir():
@@ -45,6 +52,27 @@ def run_roslyn_scan(repo: Path, timeout_s: int = 300) -> dict[str, Any] | None:
         return json.loads(out)
     except json.JSONDecodeError:
         return None
+
+
+def run_roslyn_scan(
+    repo: Path,
+    timeout_s: int = 300,
+    *,
+    save: bool = True,
+    trigger: str = "reindex",
+    duration_ms: int | None = None,
+) -> dict[str, Any] | None:
+    """Return parsed JSON from RoslynHarvester; cache per processo; opzionale persist."""
+    key = str(repo.resolve())
+    if key not in _scan_cache:
+        _scan_cache[key] = _execute_roslyn_scan(repo, timeout_s=timeout_s)
+    scan = _scan_cache[key]
+    if scan and save and key not in _persisted_repo_keys:
+        from roslyn_store import persist_roslyn_scan
+
+        persist_roslyn_scan(repo, scan, trigger=trigger, duration_ms=duration_ms)
+        _persisted_repo_keys.add(key)
+    return scan
 
 
 def merge_roslyn_into_symbol_v2(

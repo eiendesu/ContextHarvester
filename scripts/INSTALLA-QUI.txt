@@ -1,0 +1,47 @@
+Context Harvester — installazione rapida
+============================================
+
+In questa cartella trovi tutto il necessario:
+
+  context-harvester-<versione>.vsix
+  Installa-su-VSCode.bat      <- installazione COMPLETA (consigliato)
+  Post-Installa-Python.bat    <- solo Python / riparazione venv
+  LEGGIMI-RILASCIO.txt        <- guida dettagliata
+  BUILD_INFO.txt              <- versione e data build
+
+INSTALLAZIONE COMPLETA (nuovo PC)
+---------------------------------
+1. Chiudi VS Code e Cursor.
+2. Doppio clic su:  Installa-su-VSCode.bat
+   Installa in automatico:
+   - estensione VSIX
+   - ambiente Python (venv + pip, chiama Post-Installa-Python.bat)
+   - Ollama e modelli (opzionale, con domande)
+3. Riapri VS Code o Cursor -> Reload Window.
+4. Nel pannello Context Harvester: Rebuild Index, poi Functional Analysis.
+
+SOLO PYTHON (VSIX gia installato a mano)
+----------------------------------------
+1. Chiudi VS Code / Cursor.
+2. Estensioni -> Installa da VSIX -> seleziona il file .vsix in questa cartella.
+3. Doppio clic su:  Post-Installa-Python.bat
+4. Riapri l IDE -> Reload Window.
+
+PREREQUISITI
+------------
+- VS Code 1.96+ o Cursor
+- Python 3.10+ nel PATH
+- Connessione internet (prima pip install)
+- Ollama (localhost:11434) — lo script puo installarlo
+- .NET 8 SDK (opzionale, per parser C# Roslyn in v5)
+
+Dopo l installazione: Graph View (MCP) su http://127.0.0.1:3456/
+
+ERRORE "Access denied" su file .pyd (installazione VSIX)
+--------------------------------------------------------
+Il venv della versione precedente e ancora in uso.
+1. Chiudi VS Code, Cursor e terminali Python
+2. Gestione attivita: termina python.exe con percorso context-harvester
+3. Rilancia Installa-su-VSCode.bat
+   (rinomina la cartella vecchia in .bak se non puo eliminarla)
+4. In alternativa: Estensioni -> Installa da VSIX, poi Post-Installa-Python.bat

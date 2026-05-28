@@ -85,6 +85,16 @@
         "command": "context-harvester.mcpStop",
         "title": "Context Harvester: Ferma MCP Server",
         "category": "Context Harvester"
+      },
+      {
+        "command": "context-harvester.openRoslyn",
+        "title": "Context Harvester: Apri Roslyn C#",
+        "category": "Context Harvester"
+      },
+      {
+        "command": "context-harvester.runRoslynScan",
+        "title": "Context Harvester: Esegui scan Roslyn",
+        "category": "Context Harvester"
       }
     ],
     "viewsContainers": {
@@ -107,6 +117,11 @@
           "type": "webview",
           "id": "context-harvester.dev-lab",
           "name": "Harvester Lab"
+        },
+        {
+          "type": "webview",
+          "id": "context-harvester.roslyn",
+          "name": "Roslyn C#"
         }
       ]
     },

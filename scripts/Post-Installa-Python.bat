@@ -1,9 +1,11 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-if not "%CH_POSTINSTALL_KEEPOPEN%"=="1" (
-  set "CH_POSTINSTALL_KEEPOPEN=1"
-  cmd /k "set CH_POSTINSTALL_KEEPOPEN=1& call "%~f0" %*"
-  exit /b 0
+if not "%CH_SKIP_POSTINSTALL_WRAPPER%"=="1" (
+  if not "%CH_POSTINSTALL_KEEPOPEN%"=="1" (
+    set "CH_POSTINSTALL_KEEPOPEN=1"
+    cmd /k "set CH_POSTINSTALL_KEEPOPEN=1& call "%~f0" %*"
+    exit /b 0
+  )
 )
 REM ============================================================================
 REM  Post-installazione Context Harvester (dopo "Installa da VSIX" in VS Code).
@@ -129,9 +131,29 @@ if errorlevel 1 (
 
 echo.
 echo [OK] Python pronto.
-"!VENV_PY!" -m pip show chromadb | findstr /i "Name Version Location"
+"!VENV_PY!" -m pip show chromadb 2>nul | findstr /i "Name Version Location"
+"!VENV_PY!" -m pip show tree-sitter-languages 2>nul | findstr /i "Name Version"
 echo.
-echo Riapri VS Code, Reload Window, poi Rebuild Index nel pannello.
+
+where dotnet >nul 2>&1
+if errorlevel 1 (
+  echo [AVVISO] .NET SDK non trovato — parser Roslyn C# disabilitato ^(fallback regex in v5^).
+) else (
+  for /f "delims=" %%D in ('dotnet --version 2^>nul') do echo [OK] .NET SDK %%D — RoslynHarvester al primo Rebuild Index.
+)
+if exist "!EXT_DIR!\tools\RoslynHarvester\RoslynHarvester.csproj" (
+  echo [OK] RoslynHarvester incluso nell estensione.
+) else (
+  echo [AVVISO] tools\RoslynHarvester non trovato — verifica versione VSIX.
+)
+if exist "!EXT_DIR!\python\webapp\templates\index.html" (
+  echo [OK] Graph View webapp inclusa nel VSIX.
+)
+
+if not "%CH_NO_PAUSE_POSTINSTALL%"=="1" (
+  echo.
+  echo Riapri VS Code / Cursor, Reload Window, poi Rebuild Index nel pannello.
+)
 
 :fine
 echo.
@@ -142,9 +164,11 @@ if not "!INSTALL_RC!"=="0" (
   echo Post-install completato.
 )
 echo ------------------------------------------------------------
-echo.
-echo Premi un tasto per continuare...
-pause >nul 2>&1
-if errorlevel 1 pause
+if not "%CH_NO_PAUSE_POSTINSTALL%"=="1" (
+  echo.
+  echo Premi un tasto per continuare...
+  pause >nul 2>&1
+  if errorlevel 1 pause
+)
 popd 2>nul
 endlocal & exit /b !INSTALL_RC!

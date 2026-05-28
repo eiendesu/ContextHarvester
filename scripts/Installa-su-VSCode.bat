@@ -81,7 +81,7 @@ if defined RUNNING_IDE_EXE (
 
 echo Pacchetto VSIX: !VSIX!
 echo.
-echo [1/3] Installazione estensione ^(CLI IDE, fallback estrazione^)...
+echo [1/4] Installazione estensione ^(CLI IDE, fallback estrazione^)...
 set "INSTALL_METHOD="
 if defined CURSOR_EXE call :install_with_cli "!CURSOR_EXE!" "Cursor"
 if not defined INSTALL_METHOD if defined CODE_EXE call :install_with_cli "!CODE_EXE!" "VS Code"
@@ -91,11 +91,23 @@ if not defined INSTALL_METHOD (
   set "EXT_TARGET=%USERPROFILE%\.cursor\extensions"
   if not defined CURSOR_EXE set "EXT_TARGET=%USERPROFILE%\.vscode\extensions"
   echo Destinazione estensioni: !EXT_TARGET!
-  set "CH_EXT=!EXT_TARGET!"
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $v=$env:CH_VSIX; $r=$env:CH_EXT; if(-not(Test-Path -LiteralPath $v)){throw 'VSIX non trovato: ' + $v}; if(-not(Test-Path -LiteralPath $r)){New-Item -ItemType Directory -Path $r -Force | Out-Null}; $t=Join-Path $env:TEMP ('ch-vsix-' + [guid]::NewGuid().ToString()); New-Item -ItemType Directory -Path $t -Force | Out-Null; try { Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory($v, $t); $e=Join-Path $t 'extension'; if(-not(Test-Path -LiteralPath (Join-Path $e 'package.json'))){ throw 'VSIX non valido' }; $j=Get-Content -LiteralPath (Join-Path $e 'package.json') -Raw -Encoding UTF8 | ConvertFrom-Json; if(-not $j.publisher -or -not $j.name -or -not $j.version){ throw 'package.json incompleto' }; $d=Join-Path $r ($j.publisher + '.' + $j.name + '-' + $j.version); if(Test-Path -LiteralPath $d){ Remove-Item -LiteralPath $d -Recurse -Force }; Copy-Item -LiteralPath $e -Destination $d -Recurse; Write-Host ('[OK] Estensione in: ' + $d) } finally { Remove-Item -LiteralPath $t -Recurse -Force -ErrorAction SilentlyContinue }"
+  if not exist "%~dp0install-vsix-unpacked.ps1" (
+    echo [ERRORE] install-vsix-unpacked.ps1 mancante nella cartella del pacchetto.
+    set "INSTALL_RC=1"
+    goto :fine
+  )
+  echo [INFO] Chiusura processi Python/Node che bloccano il venv precedente...
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install-vsix-unpacked.ps1" -VsixPath "!CH_VSIX!" -ExtensionsRoot "!EXT_TARGET!"
   if errorlevel 1 (
     echo [ERRORE] Installazione VSIX fallita.
-    echo Alternativa: nell IDE ^> Estensioni ^> Installa da VSIX ^> seleziona !VSIX!
+    echo.
+    echo Se vedi "Access denied" su file .pyd nel venv:
+    echo   1. Chiudi VS Code, Cursor e tutte le finestre terminale Python
+    echo   2. Apri Gestione attivita e termina python.exe legati a Context Harvester
+    echo   3. Rilancia questo script
+    echo.
+    echo Alternativa: Estensioni ^> Installa da VSIX ^> !VSIX!
+    echo Poi esegui solo Post-Installa-Python.bat
     set "INSTALL_RC=1"
     goto :fine
   )
@@ -125,63 +137,25 @@ if not exist "!EXT_DIR!" (
 )
 
 echo.
-echo [2/3] Ambiente Python dell estensione...
-echo Cartella: !EXT_DIR!
-
-set "PY_EXE="
-where python >nul 2>&1 && set "PY_EXE=python"
-if not defined PY_EXE (
-  where python3 >nul 2>&1 && set "PY_EXE=python3"
-)
-if not defined PY_EXE (
-  echo [ERRORE] Python 3.10+ non trovato nel PATH.
-  echo Installa da https://www.python.org/downloads/ ^(spunta Add to PATH^).
-  echo L estensione e installata ma il backend Python non e pronto.
+echo [2/4] Ambiente Python ^(Post-Installa-Python.bat^)...
+if not exist "%~dp0Post-Installa-Python.bat" (
+  echo [ERRORE] Post-Installa-Python.bat non trovato nella cartella del pacchetto.
   set "INSTALL_RC=1"
   goto :check_ollama
 )
-
-for /f "delims=" %%V in ('!PY_EXE! --version 2^>^&1') do echo [OK] %%V
-
-set "VENV_DIR=!EXT_DIR!\python\.venv"
-call :resolve_venv_py
-
-if not exist "!VENV_PY!" (
-  echo Creazione virtualenv in python\.venv ...
-  !PY_EXE! -m venv "!VENV_DIR!"
-  if errorlevel 1 (
-    echo [ERRORE] Creazione venv fallita.
-    set "INSTALL_RC=1"
-    goto :check_ollama
-  )
-  call :resolve_venv_py
-)
-
-if not exist "!VENV_PY!" (
-  echo [ERRORE] Python del virtualenv non trovato in !VENV_DIR!
-  echo Atteso: Scripts\python.exe ^(Windows^) o bin\python ^(Linux/macOS^).
+set "CH_SKIP_POSTINSTALL_WRAPPER=1"
+set "CH_NO_PAUSE_POSTINSTALL=1"
+call "%~dp0Post-Installa-Python.bat"
+if errorlevel 1 (
+  echo [ERRORE] Post-Installa-Python.bat terminato con errori.
   set "INSTALL_RC=1"
-  goto :check_ollama
-)
-
-set "REQ=!EXT_DIR!\python\requirements.txt"
-if exist "!REQ!" (
-  echo Installazione dipendenze pip ^(chromadb, ollama, networkx, graspologic, mcp^)...
-  "!VENV_PY!" -m pip install --upgrade pip
-  "!VENV_PY!" -m pip install -r "!REQ!"
-  if errorlevel 1 (
-    echo [ERRORE] pip install fallito. Verifica rete e proxy.
-    set "INSTALL_RC=1"
-  ) else (
-    echo [OK] Dipendenze Python installate.
-  )
 ) else (
-  echo [AVVISO] requirements.txt non trovato in !EXT_DIR!\python
+  echo [OK] Ambiente Python configurato.
 )
 
 :check_ollama
 echo.
-echo [3/3] Ollama e modelli AI...
+echo [3/4] Ollama e modelli AI...
 echo.
 
 REM Cartella modelli: una directory sopra questa script, sottocartella ContextHarvesterModelli
@@ -377,18 +351,26 @@ set "OLLAMA_MODELS=!MODELS_DIR!"
 echo.
 echo Se i modelli non compaiono qui, esci da Ollama dal tray e riaprilo, poi rilancia questo script.
 
+echo.
+echo [4/4] Riepilogo installazione...
+
 :fine
 echo.
 echo ------------------------------------------------------------
 if not "!INSTALL_RC!"=="0" (
   echo Installazione terminata con errori ^(codice !INSTALL_RC!^).
-  echo Correggi gli avvisi sopra e rilancia questo script se necessario.
+  echo Correggi gli avvisi sopra.
+  echo Per riprovare solo Python: Post-Installa-Python.bat
 ) else (
-  echo Installazione completata.
-  echo Riavvia VS Code / Cursor e apri il pannello Context Harvester dalla sidebar.
+  echo Installazione COMPLETA riuscita.
+  echo   - Estensione VSIX
+  echo   - Python venv + dipendenze
+  echo   - Ollama ^(se accettato^)
+  echo.
+  echo Riavvia VS Code / Cursor, Reload Window, Rebuild Index nel pannello.
 )
 echo.
-echo Leggi LEGGIMI-RILASCIO.txt per dettagli e modelli Ollama.
+echo Leggi INSTALLA-QUI.txt e LEGGIMI-RILASCIO.txt in questa cartella.
 echo ------------------------------------------------------------
 echo.
 echo Premi un tasto per continuare...

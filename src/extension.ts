@@ -6,6 +6,7 @@ import { openLastContext } from './commands/openContext';
 import { rebuildIndex } from './commands/rebuildIndex';
 import { ContextHarvesterPanel } from './panel';
 import { DevLabPanel } from './devLabPanel';
+import { RoslynPanel } from './roslynPanel';
 import { getActiveProfile, getProfiles } from './profiles';
 import { checkOllamaForProfile, ensurePythonEnvironment } from './pythonRunner';
 import { buildConfig, getAutoIndexSettings, getRepoPath, isPathExcluded } from './settings';
@@ -15,16 +16,19 @@ import { startMcpServer, stopMcpServer } from './mcpServer';
 
 let panelProvider: ContextHarvesterPanel;
 let devLabProvider: DevLabPanel;
+let roslynProvider: RoslynPanel;
 let autoIndexTimer: ReturnType<typeof setInterval> | undefined;
 let saveDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   panelProvider = new ContextHarvesterPanel(context);
   devLabProvider = new DevLabPanel(context, panelProvider);
+  roslynProvider = new RoslynPanel(context);
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(ContextHarvesterPanel.viewType, panelProvider),
-    vscode.window.registerWebviewViewProvider(DevLabPanel.viewType, devLabProvider)
+    vscode.window.registerWebviewViewProvider(DevLabPanel.viewType, devLabProvider),
+    vscode.window.registerWebviewViewProvider(RoslynPanel.viewType, roslynProvider)
   );
 
   await getProfiles(context);
@@ -46,7 +50,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await vscode.commands.executeCommand('workbench.view.extension.context-harvester');
       await vscode.commands.executeCommand('context-harvester.dev-lab.focus');
     }),
-    vscode.commands.registerCommand('context-harvester.rebuildIndex', () => rebuildIndex(panelProvider)),
+    vscode.commands.registerCommand('context-harvester.openRoslyn', async () => {
+      await vscode.commands.executeCommand('workbench.view.extension.context-harvester');
+      await vscode.commands.executeCommand('context-harvester.roslyn.focus');
+    }),
+    vscode.commands.registerCommand('context-harvester.runRoslynScan', () => roslynProvider.runScan()),
+    vscode.commands.registerCommand('context-harvester.rebuildIndex', async () => {
+      await rebuildIndex(panelProvider);
+      await roslynProvider.refreshState();
+    }),
     vscode.commands.registerCommand('context-harvester.generateContext', () => generateContext(panelProvider)),
     vscode.commands.registerCommand('context-harvester.openLastContext', () => openLastContext(context)),
     vscode.commands.registerCommand('context-harvester.checkOllama', async () => {

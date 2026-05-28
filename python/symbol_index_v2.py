@@ -9,6 +9,9 @@ from typing import Any
 from common import emit_progress, harvester_root, iter_repo_files, merge_exclude_folders, rel_path
 
 CS_CLASS = re.compile(r"\b(?:public\s+)?(?:abstract\s+)?(?:partial\s+)?class\s+(\w+)")
+CS_RECORD_STRUCT = re.compile(
+    r"\b(?:public\s+)?(?:partial\s+)?(?:record|struct)\s+(?:class\s+)?(\w+)",
+)
 CS_METHOD = re.compile(
     r"\b(?:public|private|protected|internal)\s+(?:static\s+)?(?:async\s+)?[\w<>,\s\[\]]+\s+(\w+)\s*\(",
 )
@@ -81,10 +84,17 @@ def build_symbol_index_v2(config: dict[str, Any]) -> dict[str, Any]:
         file_map.setdefault(rel, []).append(file_id)
 
         if ext == ".cs":
+            type_spans: list[tuple[int, int, str, str]] = []
             for m in CS_CLASS.finditer(text):
-                name = m.group(1)
+                type_spans.append((m.start(), m.end(), m.group(1), "class"))
+            for m in CS_RECORD_STRUCT.finditer(text):
+                type_spans.append((m.start(), m.end(), m.group(1), "record"))
+            type_spans.sort(key=lambda x: x[0])
+
+            for idx, (start, _end, name, kind) in enumerate(type_spans):
+                block_end = type_spans[idx + 1][0] if idx + 1 < len(type_spans) else len(text)
                 cid = _nid(rel, "class", name)
-                line = _line_number(text, m.start())
+                line = _line_number(text, start)
                 sym_type = "dto" if DTO_SUFFIX.search(name) else "class"
                 nodes.append(
                     {
@@ -113,17 +123,13 @@ def build_symbol_index_v2(config: dict[str, Any]) -> dict[str, Any]:
                 )
                 if sym_type == "dto":
                     entities.append({"id": cid, "name": name, "file": rel, "kind": "dto"})
-                for mm in CS_METHOD.finditer(text):
-                    if mm.start() < m.start():
-                        continue
-                    # crude: next class ends scope — take methods within 8k chars
-                    if mm.start() > m.start() + 8000:
-                        break
+                block = text[start:block_end]
+                for mm in CS_METHOD.finditer(block):
                     mn = mm.group(1)
-                    if mn in ("if", "for", "while", "switch", "catch"):
+                    if mn in ("if", "for", "while", "switch", "catch", "get", "set", "value"):
                         continue
                     mid = _nid(rel, "method", f"{name}.{mn}")
-                    mline = _line_number(text, mm.start())
+                    mline = _line_number(text, start + mm.start())
                     nodes.append(
                         {
                             "id": mid,

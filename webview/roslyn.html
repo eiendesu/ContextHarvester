@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{CSP}}; script-src {{CSP}};" />
+  <link rel="stylesheet" href="{{CSS_URI}}" />
+</head>
+<body>
+  <h1 class="title">Roslyn C# <span class="version" id="app-version">—</span></h1>
+  <p id="repo-line" class="muted small">—</p>
+
+  <div id="banner-dotnet" class="banner banner-error hidden"></div>
+  <div id="banner-empty" class="banner banner-warn hidden">Nessuna analisi salvata. Esegui uno scan o un Rebuild Index con useRoslyn attivo.</div>
+
+  <nav class="tabs">
+    <button type="button" class="tab active" data-tab="current">Analisi</button>
+    <button type="button" class="tab" data-tab="history">Storico</button>
+  </nav>
+
+  <section id="panel-current" class="panel active">
+    <div class="toolbar">
+      <button type="button" id="btn-scan" class="btn primary">Esegui scan Roslyn</button>
+      <span id="scan-progress" class="muted small"></span>
+    </div>
+    <div id="summary-cards" class="summary-cards"></div>
+    <p id="detail-meta" class="muted small"></p>
+    <input type="search" id="file-filter" class="search" placeholder="Filtra file C#…" />
+    <div id="file-list" class="file-list scroll"></div>
+  </section>
+
+  <section id="panel-history" class="panel">
+    <p class="muted small">Ogni Rebuild Index (con Roslyn) e ogni scan manuale crea una voce.</p>
+    <ul id="history-list" class="history-list"></ul>
+  </section>
+
+  <script src="{{JS_URI}}"></script>
+</body>
+</html>
