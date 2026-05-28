@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src {{CSP}} 'unsafe-inline'; script-src {{CSP}} 'unsafe-inline';"
+    />
+    <link rel="stylesheet" href="{{CSS_URI}}" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="topbar">
+        <div>
+          <h1>Knowledge Graph</h1>
+          <div id="graph-subtitle" class="muted">—</div>
+        </div>
+        <div class="stat">
+          <div class="muted">Nodi</div>
+          <div id="stat-nodes">0</div>
+          <div class="muted">Edge</div>
+          <div id="stat-edges">0</div>
+        </div>
+      </header>
+
+      <section class="controls">
+        <label>
+          <span>Ricerca nodo</span>
+          <input id="search" type="text" placeholder="Nome file o simbolo..." />
+        </label>
+        <label>
+          <span>Community / funzione</span>
+          <select id="filter-group">
+            <option value="">Tutte</option>
+          </select>
+        </label>
+        <div class="btn-row">
+          <button id="btn-open" class="btn" type="button" disabled>
+            Apri file
+          </button>
+          <button id="btn-seed" class="btn ghost" type="button" disabled>
+            Usa come seed retrieval
+          </button>
+        </div>
+        <div id="node-details" class="panel muted small">Seleziona un nodo</div>
+      </section>
+
+      <div id="graph-container"></div>
+    </div>
+
+    <script src="{{GRAPHOLOGY_JS}}"></script>
+    <script src="{{SIGMA_JS}}"></script>
+    <script src="{{JS_URI}}"></script>
+  </body>
+</html>

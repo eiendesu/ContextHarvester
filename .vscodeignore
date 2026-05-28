@@ -12,3 +12,4 @@ _release-test/**
 python/.venv/**
 **/__pycache__/**
 *.pyc
+.context-harvester/**

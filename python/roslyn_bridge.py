@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -31,23 +32,53 @@ def _execute_roslyn_scan(repo: Path, timeout_s: int = 300) -> dict[str, Any] | N
         return None
     if not _TOOL_DIR.is_dir():
         return None
+    # Prepare run-outputs directory for debug logs
+    try:
+        out_dir = repo.resolve() / ".context-harvester" / "roslyn" / "run-outputs"
+        out_dir.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        out_dir = None
+
+    # Prefer running the compiled DLL if present, otherwise fall back to `dotnet run`.
+    dll_path = _TOOL_DIR / "bin" / "Release" / "net8.0" / "RoslynHarvester.dll"
+    if dll_path.is_file():
+        cmd = ["dotnet", str(dll_path), str(repo.resolve())]
+        cwd = str(_TOOL_DIR)
+    else:
+        cmd = ["dotnet", "run", "--project", str(_TOOL_DIR), "--", str(repo.resolve())]
+        cwd = str(_TOOL_DIR)
+
     try:
         proc = subprocess.run(
-            ["dotnet", "run", "--project", str(_TOOL_DIR), "--", str(repo.resolve())],
+            cmd,
             capture_output=True,
             text=True,
             timeout=timeout_s,
-            cwd=str(_TOOL_DIR),
+            cwd=cwd,
         )
     except subprocess.TimeoutExpired:
         return None
     except OSError:
         return None
+
+    # write debug outputs if possible
+    try:
+        if out_dir is not None:
+            ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            if proc.stdout:
+                (out_dir / f"roslyn_{ts}.stdout.txt").write_text(proc.stdout, encoding="utf-8")
+            if proc.stderr:
+                (out_dir / f"roslyn_{ts}.stderr.txt").write_text(proc.stderr, encoding="utf-8")
+    except Exception:
+        pass
+
     if proc.returncode != 0:
         return None
+
     out = (proc.stdout or "").strip()
     if not out:
         return None
+
     try:
         return json.loads(out)
     except json.JSONDecodeError:

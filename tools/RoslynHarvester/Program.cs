@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Collections.Generic;
 
 if (args.Length < 1)
 {
@@ -14,7 +15,39 @@ var onlyFiles = args.Length > 1 ? args.Skip(1).ToHashSet(StringComparer.OrdinalI
 
 var result = new ScanResult();
 
-foreach (var file in Directory.EnumerateFiles(repoRoot, "*.cs", SearchOption.AllDirectories))
+IEnumerable<string> EnumerateFilesSafe(string root)
+{
+    var stack = new Stack<string>();
+    stack.Push(root);
+    while (stack.Count > 0)
+    {
+        var dir = stack.Pop();
+        string[] files = null;
+        try
+        {
+            files = Directory.GetFiles(dir, "*.cs");
+        }
+        catch
+        {
+            continue;
+        }
+        foreach (var f in files)
+            yield return f;
+        string[] subs = null;
+        try
+        {
+            subs = Directory.GetDirectories(dir);
+        }
+        catch
+        {
+            continue;
+        }
+        foreach (var s in subs)
+            stack.Push(s);
+    }
+}
+
+foreach (var file in EnumerateFilesSafe(repoRoot))
 {
     var rel = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
     if (rel.Contains("/bin/", StringComparison.OrdinalIgnoreCase) ||
@@ -96,7 +129,10 @@ foreach (var file in Directory.EnumerateFiles(repoRoot, "*.cs", SearchOption.All
         result.Files.Add(fileEntry);
 }
 
-var json = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = false });
+var json = JsonSerializer.Serialize(
+    result,
+    new JsonSerializerOptions { WriteIndented = false, PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+);
 Console.WriteLine(json);
 
 static bool IsDtoName(string name) =>
