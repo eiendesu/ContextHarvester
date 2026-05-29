@@ -1,0 +1,17 @@
+{
+  "analyzedAt": "2024-01-15T10:30:00Z",
+  "deadCode": [
+    { "label": "OldHelper", "file": "Utils/OldHelper.cs" },
+    { "label": "LegacyAuth", "file": "Auth/LegacyAuth.cs" }
+  ],
+  "orphanEndpoints": [
+    { "label": "/api/v1/legacy-report", "file": "Controllers/ReportController.cs" }
+  ],
+  "cycles": [],
+  "highImpact": [
+    { "label": "OrderService", "file": "Services/OrderService.cs", "impactScore": 8 }
+  ],
+  "bottlenecks": [
+    { "label": "PaymentGateway", "file": "Services/PaymentGateway.cs", "callCount": 42 }
+  ]
+}

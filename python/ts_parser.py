@@ -25,6 +25,16 @@ _FETCH_RE = re.compile(
     re.I,
 )
 _CALL_RE = re.compile(r"\b(\w+)\s*\(")
+_EXPORT_DEFAULT_RE = re.compile(r"\bexport\s+default\s+(?:function\s+)?(\w+)", re.I)
+_IMPORT_NAMES_RE = re.compile(
+    r"""import\s+(?:type\s+)?\{([^}]+)\}\s+from\s+['\"]([^'\"]+)['\"]""",
+)
+_IMPORT_DEFAULT_RE = re.compile(
+    r"""import\s+(\w+)\s+from\s+['\"]([^'\"]+)['\"]""",
+)
+_JSX_RE = re.compile(r"<([A-Z]\w+)")
+_HOOK_RE = re.compile(r"\b(use\w+)\b")
+_REQUIRE_RE = re.compile(r"""require\s*\(\s*['\"]([^'\"]+)['\"]\s*\)""")
 
 
 @dataclass
@@ -32,8 +42,12 @@ class TsFileAnalysis:
     path: str
     exports: list[dict[str, Any]] = field(default_factory=list)
     imports: list[dict[str, Any]] = field(default_factory=list)
+    import_names: list[dict[str, Any]] = field(default_factory=list)
     api_calls: list[dict[str, Any]] = field(default_factory=list)
     calls: list[dict[str, Any]] = field(default_factory=list)
+    jsx_components: list[dict[str, Any]] = field(default_factory=list)
+    hooks: list[dict[str, Any]] = field(default_factory=list)
+    default_export: str | None = None
     origin: str = "regex"
 
 
@@ -41,14 +55,46 @@ def _line(text: bytes, node) -> int:
     return text[: node.start_byte].count(b"\n") + 1
 
 
+def _enrich_with_regex(text: str, result: TsFileAnalysis) -> None:
+    for m in _JSX_RE.finditer(text):
+        result.jsx_components.append(
+            {"name": m.group(1), "line": text.count("\n", 0, m.start()) + 1}
+        )
+    for m in _HOOK_RE.finditer(text):
+        result.hooks.append(
+            {"name": m.group(1), "line": text.count("\n", 0, m.start()) + 1}
+        )
+    for m in _EXPORT_DEFAULT_RE.finditer(text):
+        result.default_export = m.group(1)
+    for m in _IMPORT_NAMES_RE.finditer(text):
+        raw = m.group(1)
+        names = [n.strip().split()[0] for n in raw.split(",") if n.strip()]
+        if names:
+            result.import_names.append(
+                {"names": names, "from": m.group(2), "line": text.count("\n", 0, m.start()) + 1}
+            )
+    for m in _IMPORT_DEFAULT_RE.finditer(text):
+        result.import_names.append(
+            {"names": [m.group(1)], "from": m.group(2), "line": text.count("\n", 0, m.start()) + 1, "kind": "default"}
+        )
+    for m in _REQUIRE_RE.finditer(text):
+        result.imports.append(
+            {"from": m.group(1), "line": text.count("\n", 0, m.start()) + 1, "kind": "require"}
+        )
+
+
 def parse_ts_file(rel: str, text: str) -> TsFileAnalysis:
     result = TsFileAnalysis(path=rel)
     if _TS_AVAILABLE and _parser is not None:
         try:
-            return _parse_tree_sitter(rel, text, result)
+            _parse_tree_sitter(rel, text, result)
+            _enrich_with_regex(text, result)
+            return result
         except Exception:
             pass
-    return _parse_regex(rel, text, result)
+    _parse_regex(rel, text, result)
+    _enrich_with_regex(text, result)
+    return result
 
 
 def _parse_tree_sitter(rel: str, text: str, result: TsFileAnalysis) -> TsFileAnalysis:

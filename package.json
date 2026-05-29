@@ -16,8 +16,13 @@
   "engines": {
     "vscode": "^1.96.0"
   },
-  "categories": ["Other", "Machine Learning"],
-  "activationEvents": ["onStartupFinished"],
+  "categories": [
+    "Other",
+    "Machine Learning"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -94,6 +99,11 @@
       {
         "command": "context-harvester.runRoslynScan",
         "title": "Context Harvester: Esegui scan Roslyn",
+        "category": "Context Harvester"
+      },
+      {
+        "command": "context-harvester.openKnowledgeGraph",
+        "title": "Context Harvester: Apri Knowledge Graph (Sigma)",
         "category": "Context Harvester"
       }
     ],
@@ -234,24 +244,60 @@
         },
         "contextHarvester.includeExtensions": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "description": "Whitelist estensioni (se vuota, tutto tranne blacklist)."
         },
         "contextHarvester.excludeExtensions": {
           "type": "array",
-          "items": { "type": "string" },
-          "default": [".md", ".txt", ".json", ".lock", ".yaml", ".yml", ".png", ".jpg", ".svg", ".pdf", ".exe", ".dll", ".zip", ".nupkg"]
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            ".md",
+            ".txt",
+            ".json",
+            ".lock",
+            ".yaml",
+            ".yml",
+            ".png",
+            ".jpg",
+            ".svg",
+            ".pdf",
+            ".exe",
+            ".dll",
+            ".zip",
+            ".nupkg"
+          ]
         },
         "contextHarvester.excludeFolders": {
           "type": "array",
-          "items": { "type": "string" },
-          "default": ["bin", "obj", "node_modules", ".git", "dist", "build", ".context-harvester", "packages", ".vs", "TestResults"]
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "bin",
+            "obj",
+            "node_modules",
+            ".git",
+            "dist",
+            "build",
+            ".context-harvester",
+            "packages",
+            ".vs",
+            "TestResults"
+          ]
         },
         "contextHarvester.docExtensions": {
           "type": "array",
-          "items": { "type": "string" },
-          "default": [".md"]
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            ".md"
+          ]
         },
         "contextHarvester.topK": {
           "type": "number",
@@ -393,13 +439,27 @@
         },
         "contextHarvester.analysis.entryPointPatterns": {
           "type": "array",
-          "items": { "type": "string" },
-          "default": ["Controller", "Program.cs", "Startup.cs", "Page.tsx", "App.tsx", "index.ts"]
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "Controller",
+            "Program.cs",
+            "Startup.cs",
+            "Page.tsx",
+            "App.tsx",
+            "index.ts"
+          ]
         },
         "contextHarvester.analysis.apiEdgePatterns": {
           "type": "array",
-          "items": { "type": "string" },
-          "default": ["fetch", "axios"]
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "fetch",
+            "axios"
+          ]
         },
         "contextHarvester.enableGraphView": {
           "type": "boolean",

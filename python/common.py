@@ -233,9 +233,28 @@ def get_ollama_client(url: str):
     return ollama.Client(host=host)
 
 
-def embed_text(client, model: str, text: str) -> list[float]:
-    resp = client.embeddings(model=model, prompt=text[:8000])
-    return resp["embedding"]
+def embed_text(client, model: str, text: str, _depth: int = 0) -> list[float]:
+    if _depth > 3:
+        raise RuntimeError(f"Embedding failed after recursive splitting: len={len(text)}")
+
+    limits = [16000, 12000, 8000, 4000, 2000, 1000, 500]
+    last_err = None
+    for limit in limits:
+        try:
+            resp = client.embeddings(model=model, prompt=text[:limit])
+            return resp["embedding"]
+        except Exception as e:
+            err = str(e).lower()
+            if "context length" in err or "exceeds" in err or "input length" in err:
+                last_err = e
+                continue
+            raise
+
+    # Fallback: split in half, embed each half, average vectors
+    half = len(text) // 2
+    emb1 = embed_text(client, model, text[:half], _depth + 1)
+    emb2 = embed_text(client, model, text[half:], _depth + 1)
+    return [(a + b) / 2 for a, b in zip(emb1, emb2)]
 
 
 def ollama_generate(client, model: str, prompt: str) -> str:

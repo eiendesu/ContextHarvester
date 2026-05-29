@@ -1,0 +1,6 @@
+{
+  "links": [
+    { "clientFile": "Services/OrderService.cs", "backendFile": "Services/PaymentGateway.cs", "clientFunction": "ProcessPayment", "endpoint": "POST /api/pay" },
+    { "clientFile": "Services/UserService.cs", "backendFile": "Controllers/UserController.cs", "clientFunction": "GetUser", "endpoint": "GET /api/users/{id}" }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "nodes": [
+    { "id": "OrderController.cs:CreateOrder", "label": "CreateOrder", "type": "method", "filePath": "Controllers/OrderController.cs" },
+    { "id": "OrderController.cs:GetOrderById", "label": "GetOrderById", "type": "method", "filePath": "Controllers/OrderController.cs" },
+    { "id": "OrderService.cs:Process", "label": "Process", "type": "method", "filePath": "Services/OrderService.cs" },
+    { "id": "OrderService.cs:Validate", "label": "Validate", "type": "method", "filePath": "Services/OrderService.cs" },
+    { "id": "OrderRepository.cs:Save", "label": "Save", "type": "method", "filePath": "Data/OrderRepository.cs" }
+  ],
+  "edges": [
+    { "from": "OrderController.cs:CreateOrder", "to": "OrderService.cs:Process", "type": "imports" },
+    { "from": "OrderService.cs:Process", "to": "OrderRepository.cs:Save", "type": "imports" },
+    { "from": "OrderService.cs:Process", "to": "OrderService.cs:Validate", "type": "imports" }
+  ]
+}

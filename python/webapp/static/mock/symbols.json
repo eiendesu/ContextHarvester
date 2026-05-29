@@ -1,0 +1,15 @@
+{
+  "symbols": [
+    { "type": "method", "name": "CreateOrder", "file": "Controllers/OrderController.cs", "line": 24 },
+    { "type": "method", "name": "GetOrderById", "file": "Controllers/OrderController.cs", "line": 42 },
+    { "type": "method", "name": "ProcessPayment", "file": "Services/PaymentGateway.cs", "line": 18 },
+    { "type": "class", "name": "OrderService", "file": "Services/OrderService.cs", "line": 8 },
+    { "type": "class", "name": "OrderRepository", "file": "Data/OrderRepository.cs", "line": 10 },
+    { "type": "dto", "name": "OrderDto", "file": "Models/OrderDto.cs", "line": 5 },
+    { "type": "dto", "name": "UserDto", "file": "Models/UserDto.cs", "line": 5 },
+    { "type": "api_endpoint", "name": "POST /api/orders", "file": "Controllers/OrderController.cs", "line": 24 },
+    { "type": "api_endpoint", "name": "GET /api/users/{id}", "file": "Controllers/UserController.cs", "line": 30 },
+    { "type": "api_client_method", "name": "SendEmailAsync", "file": "Services/EmailService.cs", "line": 15 },
+    { "type": "interface", "name": "IOrderService", "file": "Interfaces/IOrderService.cs", "line": 6 }
+  ]
+}

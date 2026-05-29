@@ -37,6 +37,7 @@ def build_import_graph(config: dict[str, Any]) -> dict[str, Any]:
     ]
     total = len(files)
 
+    analyses: dict[str, Any] = {}
     for i, path in enumerate(files, 1):
         if i % 40 == 0 or i == total:
             emit_progress("import_graph", "Import graph", i, total)
@@ -46,7 +47,22 @@ def build_import_graph(config: dict[str, Any]) -> dict[str, Any]:
         except OSError:
             continue
         analysis = parse_ts_file(rel, text)
-        file_exports[rel] = [e["name"] for e in analysis.exports]
+        analyses[rel] = analysis
+        exports = [e["name"] for e in analysis.exports]
+        if analysis.default_export:
+            exports.append(analysis.default_export)
+        file_exports[rel] = exports
+
+    # Build name -> files mapping for component/hook resolution
+    name_to_files: dict[str, list[str]] = {}
+    for rel, analysis in analyses.items():
+        for e in analysis.exports:
+            name_to_files.setdefault(e["name"], []).append(rel)
+        if analysis.default_export:
+            name_to_files.setdefault(analysis.default_export, []).append(rel)
+
+    for rel, analysis in analyses.items():
+        # 1. Direct import edges (highest confidence)
         for imp in analysis.imports:
             target = _resolve_import(rel, imp["from"])
             if target:
@@ -55,7 +71,61 @@ def build_import_graph(config: dict[str, Any]) -> dict[str, Any]:
                         "from": rel,
                         "to": target,
                         "type": "imports",
+                        "confidence": 1.0,
                         "line": imp.get("line"),
+                        "evidence": imp.get("from"),
+                        "origin": analysis.origin,
+                    }
+                )
+
+        # 2. JSX component usage edges
+        for jsx in analysis.jsx_components:
+            name = jsx["name"]
+            targets = name_to_files.get(name, [])
+            for target in targets:
+                if target != rel:
+                    edges.append(
+                        {
+                            "from": rel,
+                            "to": target,
+                            "type": "uses_component",
+                            "confidence": 0.7,
+                            "line": jsx.get("line"),
+                            "evidence": f"JSX <{name}/>",
+                            "origin": analysis.origin,
+                        }
+                    )
+
+        # 3. Hook usage edges
+        for hook in analysis.hooks:
+            name = hook["name"]
+            targets = name_to_files.get(name, [])
+            for target in targets:
+                if target != rel:
+                    edges.append(
+                        {
+                            "from": rel,
+                            "to": target,
+                            "type": "uses_hook",
+                            "confidence": 0.6,
+                            "line": hook.get("line"),
+                            "evidence": f"hook {name}()",
+                            "origin": analysis.origin,
+                        }
+                    )
+
+        # 4. Probabilistic edges for unresolved imports
+        for imp in analysis.imports:
+            target = _resolve_import(rel, imp["from"])
+            if not target:
+                edges.append(
+                    {
+                        "from": rel,
+                        "to": imp["from"],
+                        "type": "imports_unresolved",
+                        "confidence": 0.3,
+                        "line": imp.get("line"),
+                        "evidence": imp["from"],
                         "origin": analysis.origin,
                     }
                 )
@@ -64,9 +134,9 @@ def build_import_graph(config: dict[str, Any]) -> dict[str, Any]:
     callers: list[dict[str, Any]] = []
     api_files = {f for f in file_exports if "api" in f.lower() or "service" in f.lower()}
     for e in edges:
-        if e["to"] in api_files or any(
+        if e["type"] == "imports" and (e["to"] in api_files or any(
             e["to"].endswith(x) for x in (".ts", ".tsx")
-        ):
+        )):
             callers.append(
                 {
                     "consumerFile": e["from"],

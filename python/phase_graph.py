@@ -177,6 +177,39 @@ def run(config: dict[str, Any]) -> dict[str, Any]:
             else:
                 G_dir.add_edge(uf, target, relation="uses", confidence="EXTRACTED", weight=1.0)
 
+    # Enrich with import_graph edges (TSX/TS dependencies)
+    import_graph_path = harv_root / "import_graph.json"
+    if import_graph_path.is_file():
+        try:
+            ig = json.loads(import_graph_path.read_text(encoding="utf-8"))
+            for e in ig.get("edges", []):
+                src = e.get("from")
+                tgt = e.get("to")
+                if not src or not tgt:
+                    continue
+                add_node_if_missing(src)
+                add_node_if_missing(tgt)
+                edge_type = e.get("type", "imports")
+                confidence = e.get("confidence", 1.0)
+                if G_dir.has_edge(src, tgt):
+                    existing_weight = float(G_dir[src][tgt].get("weight", 1.0))
+                    G_dir[src][tgt]["weight"] = existing_weight + 1.0
+                    existing_conf = G_dir[src][tgt].get("confidence", "EXTRACTED")
+                    if isinstance(confidence, (int, float)) and (not isinstance(existing_conf, (int, float)) or confidence > existing_conf):
+                        G_dir[src][tgt]["confidence"] = confidence
+                    if "evidence" not in G_dir[src][tgt] and e.get("evidence"):
+                        G_dir[src][tgt]["evidence"] = e["evidence"]
+                else:
+                    G_dir.add_edge(
+                        src, tgt,
+                        relation=edge_type,
+                        confidence=confidence,
+                        weight=1.0,
+                        evidence=e.get("evidence", ""),
+                    )
+        except Exception:
+            pass
+
     # Cluster on undirected projection.
     G_und = G_dir.to_undirected()
     isolates = [n for n in G_und.nodes if G_und.degree(n) == 0]

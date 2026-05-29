@@ -1,0 +1,8 @@
+{
+  "found": true,
+  "path": [
+    { "id": "OrderController.cs", "label": "OrderController" },
+    { "id": "OrderService.cs", "label": "OrderService" },
+    { "id": "PaymentGateway.cs", "label": "PaymentGateway" }
+  ]
+}

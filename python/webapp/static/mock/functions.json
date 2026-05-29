@@ -1,0 +1,49 @@
+{
+  "functions": [
+    {
+      "id": "orders",
+      "name": "Gestione Ordini",
+      "source": "leiden",
+      "fileCount": 3,
+      "files": ["OrderController.cs", "OrderService.cs", "OrderRepository.cs"],
+      "validated": true,
+      "description": "Crea, modifica e traccia ordini"
+    },
+    {
+      "id": "users",
+      "name": "Gestione Utenti",
+      "source": "leiden",
+      "fileCount": 2,
+      "files": ["UserController.cs", "UserService.cs"],
+      "validated": true,
+      "description": "Registrazione, login e profili"
+    },
+    {
+      "id": "products",
+      "name": "Catalogo Prodotti",
+      "source": "leiden",
+      "fileCount": 2,
+      "files": ["ProductController.cs", "ProductService.cs"],
+      "validated": true,
+      "description": "Inventario e ricerca"
+    },
+    {
+      "id": "payments",
+      "name": "Pagamenti",
+      "source": "label-first",
+      "fileCount": 2,
+      "files": ["PaymentGateway.cs", "OrderService.cs"],
+      "validated": true,
+      "description": "Gateway e fatturazione"
+    },
+    {
+      "id": "notifications",
+      "name": "Notifiche",
+      "source": "leiden",
+      "fileCount": 1,
+      "files": ["EmailService.cs"],
+      "validated": false,
+      "description": "Email e push"
+    }
+  ]
+}

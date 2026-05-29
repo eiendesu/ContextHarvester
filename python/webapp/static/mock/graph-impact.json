@@ -1,0 +1,18 @@
+{
+  "node": "OrderService.cs",
+  "label": "OrderService",
+  "total": 5,
+  "impact": {
+    "1": [
+      { "id": "OrderRepository.cs", "label": "OrderRepository", "type": "file" },
+      { "id": "PaymentGateway.cs", "label": "PaymentGateway", "type": "file" }
+    ],
+    "2": [
+      { "id": "EmailService.cs", "label": "EmailService", "type": "file" },
+      { "id": "OrderDto.cs", "label": "OrderDto", "type": "dto" }
+    ],
+    "3": [
+      { "id": "UserService.cs", "label": "UserService", "type": "file" }
+    ]
+  }
+}

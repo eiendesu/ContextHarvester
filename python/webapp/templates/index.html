@@ -1,194 +1,811 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Context Harvester — Graph View</title>
-  <link rel="stylesheet" href="/vendor/vis-network/vis-network.min.css" />
-  <link rel="stylesheet" href="/static/app.css" />
-</head>
-<body>
-  <header class="topbar">
-    <h1>🌾 Context Harvester — Graph View</h1>
-    <span id="status-line" class="muted">Caricamento...</span>
-  </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Context Harvester — Graph View</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/vendor/vis-network/vis-network.min.css" />
+    <link rel="stylesheet" href="/static/app.css?v=5" />
+  </head>
+  <body>
+    <!-- ═══ HEADER ═══ -->
+    <header class="app-header">
+      <div class="app-header-left">
+        <span class="brand-name">Context Harvester</span>
+        <nav class="tabs" id="tabs">
+          <button type="button" class="tab active" data-tab="sigma">
+            Grafo
+          </button>
+          <button type="button" class="tab" data-tab="symbols">Simboli</button>
+          <button type="button" class="tab" data-tab="impact">Impact</button>
+          <button type="button" class="tab" data-tab="analysis">Analisi</button>
+          <button type="button" class="tab" data-tab="functions">
+            Funzionalità
+          </button>
+        </nav>
+      </div>
+      <div class="app-header-right">
+        <span id="status-line" class="header-status">Caricamento...</span>
+      </div>
+    </header>
 
-  <div id="ch-progress" class="ch-progress hidden" role="status" aria-live="polite" aria-hidden="true">
-    <div id="ch-progress-label" class="ch-progress-label"></div>
-    <div class="ch-progress-track" aria-hidden="true">
-      <div id="ch-progress-bar" class="ch-progress-bar indeterminate"></div>
+    <!-- ═══ PROGRESS ═══ -->
+    <div
+      id="ch-progress"
+      class="ch-progress hidden"
+      role="status"
+      aria-live="polite"
+      aria-hidden="true"
+    >
+      <div id="ch-progress-label" class="ch-progress-label"></div>
+      <div class="ch-progress-track">
+        <div id="ch-progress-bar" class="ch-progress-bar indeterminate"></div>
+      </div>
     </div>
-  </div>
 
-  <nav class="tabs" id="tabs">
-    <button type="button" class="tab" data-tab="graph">🗺 Grafo (legacy)</button>
-    <button type="button" class="tab active" data-tab="sigma">◈ Grafo</button>
-    <button type="button" class="tab" data-tab="symbols">⌕ Simboli</button>
-    <button type="button" class="tab" data-tab="impact">⚡ Impact</button>
-    <button type="button" class="tab" data-tab="analysis">🔍 Analisi</button>
-    <button type="button" class="tab" data-tab="functions">🏷 Funzionalità</button>
-  </nav>
-
-  <main>
-    <section id="panel-graph" class="panel">
-      <div class="toolbar">
-        <input type="search" id="graph-search" placeholder="Cerca nodo o simbolo..." />
-        <button type="button" id="graph-search-btn" class="primary">🔍 Cerca</button>
-        <select id="graph-group-filter" title="Filtra per funzionalità mappata">
-          <option value="">Tutte le funzionalità</option>
-        </select>
-        <button type="button" id="graph-filter-reset">Reset filtri</button>
-        <button type="button" id="graph-fit">Fit all</button>
-      </div>
-      <div class="toolbar label-first-inline">
-        <span class="label-inline">Funzionalità da label:</span>
-        <input type="text" id="graph-lf-input" placeholder="pagina lista contratti" style="flex:1;min-width:12rem" />
-        <button type="button" id="graph-lf-search" class="primary">🔍 Cerca nel grafo</button>
-        <label class="muted">Depth <input type="number" id="graph-lf-depth" value="2" min="1" max="4" style="width:3rem" /></label>
-      </div>
-      <p id="graph-lf-status" class="muted small lf-status-inline"></p>
-      <div id="graph-network"></div>
-      <div id="graph-selection" class="selection-bar muted">Nessun nodo selezionato</div>
-    </section>
-
-    <section id="panel-symbols" class="panel">
-      <div class="toolbar sym-toolbar">
-        <input type="search" id="sym-search" placeholder="Filtra per nome, file, tipo…" style="flex:1;min-width:14rem" />
-        <button type="button" id="sym-refresh">Aggiorna</button>
-        <label class="muted">Tipo
-          <select id="sym-type-filter">
-            <option value="">Tutti</option>
-            <option value="method">Metodi</option>
-            <option value="class">Classi</option>
-            <option value="dto">DTO</option>
-            <option value="api_endpoint">Endpoint</option>
-            <option value="api_client_method">API client</option>
-            <option value="interface">Interfacce</option>
-          </select>
-        </label>
-      </div>
-      <p id="sym-meta" class="muted small"></p>
-      <p class="muted small">Metodi/classi estratti dal codice (non un simbolo per ogni file). Dopo Rebuild Index con Roslyn (.NET SDK) il conteggio C# migliora.</p>
-      <div id="sym-list-wrap" class="scroll-panel sym-list-wrap">
-        <table class="sym-table" id="sym-table">
-          <thead>
-            <tr>
-              <th>Tipo</th>
-              <th>Nome</th>
-              <th>File</th>
-              <th>Riga</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="sym-tbody"></tbody>
-        </table>
-        <p id="sym-empty" class="muted hidden">Nessun simbolo trovato.</p>
-      </div>
-    </section>
-
-    <section id="panel-impact" class="panel">
-      <div class="toolbar">
-        <label>Nodo: <input type="text" id="impact-node" placeholder="nome metodo, endpoint o path file" style="min-width:14rem" /></label>
-        <button type="button" id="impact-run">Analizza</button>
-        <label>Distanza <input type="number" id="impact-depth" value="3" min="1" max="8" style="width:3rem" /></label>
-        <select id="impact-direction" title="Direzione">
-          <option value="downstream">Downstream</option>
-          <option value="upstream">Upstream</option>
-        </select>
-        <select id="impact-mode">
-          <option value="transitive">Transitive</option>
-          <option value="direct">Direct</option>
-        </select>
-        <label><input type="checkbox" id="impact-v2" checked /> v2 typed</label>
-        <label><input type="checkbox" id="impact-cross-layer" /> Cross-layer API</label>
-      </div>
-      <div id="impact-results" class="scroll-panel"></div>
-    </section>
-
-    <section id="panel-analysis" class="panel">
-      <div class="toolbar">
-        <button type="button" id="analysis-recalc">🔄 Ricalcola analisi</button>
-        <span id="analysis-meta" class="muted"></span>
-      </div>
-      <div id="analysis-sections" class="scroll-panel"></div>
-      <div id="analysis-info-modal" class="info-modal hidden" role="dialog" aria-modal="true" aria-labelledby="analysis-info-title">
-        <div class="info-modal-backdrop" id="analysis-info-backdrop"></div>
-        <div class="info-modal-box">
-          <h3 id="analysis-info-title"></h3>
-          <div id="analysis-info-body" class="info-modal-body"></div>
-          <button type="button" id="analysis-info-close" class="primary">Chiudi</button>
+    <!-- ═══ MAIN ═══ -->
+    <main>
+      <!-- ── PANEL: Simboli ── -->
+      <section id="panel-symbols" class="panel">
+        <aside class="panel-sidebar">
+          <div class="sb-section">
+            <div class="sb-section-title">⌕ FILTRI</div>
+            <input
+              type="search"
+              id="sym-search"
+              placeholder="Filtra per nome, file, tipo…"
+              class="sb-input-full"
+            />
+            <label class="sb-field-label">Tipo simbolo</label>
+            <select id="sym-type-filter" class="sb-input">
+              <option value="">Tutti</option>
+              <option value="method">Metodi</option>
+              <option value="class">Classi</option>
+              <option value="dto">DTO</option>
+              <option value="api_endpoint">Endpoint</option>
+              <option value="api_client_method">API client</option>
+              <option value="interface">Interfacce</option>
+            </select>
+            <button
+              type="button"
+              id="sym-refresh"
+              class="sb-btn sb-btn-primary"
+              style="margin-top: 6px"
+            >
+              Aggiorna
+            </button>
+          </div>
+          <div class="sb-section">
+            <p class="muted small" style="margin: 0">
+              Metodi/classi estratti dal codice. Dopo Rebuild Index con Roslyn
+              (.NET SDK) il conteggio C# migliora.
+            </p>
+          </div>
+        </aside>
+        <div class="panel-main">
+          <p id="sym-meta" class="muted small"></p>
+          <div id="sym-list-wrap" class="scroll-panel sym-list-wrap">
+            <table class="sym-table" id="sym-table">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Nome</th>
+                  <th>File</th>
+                  <th>Riga</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="sym-tbody"></tbody>
+            </table>
+            <p id="sym-empty" class="muted hidden">Nessun simbolo trovato.</p>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section id="panel-functions" class="panel">
-      <div class="toolbar">
-        <input type="search" id="fn-filter" placeholder="Filtra funzionalità..." />
-        <button type="button" id="fn-refresh">Aggiorna</button>
-      </div>
-      <div id="fn-list" class="scroll-panel"></div>
-      <div class="label-first-box">
-        <h3>➕ Crea da label</h3>
-        <div class="toolbar">
-          <input type="text" id="lf-input" placeholder="pagina lista contratti" style="flex:1" />
-          <button type="button" id="lf-search">🔍 Cerca nel grafo</button>
+      <!-- ── PANEL: Impact ── -->
+      <section id="panel-impact" class="panel">
+        <aside class="panel-sidebar">
+          <div class="sb-section">
+            <div class="sb-section-title">⚡ IMPACT ANALYSIS</div>
+            <label class="sb-field-label">Nodo target</label>
+            <input
+              type="text"
+              id="impact-node"
+              placeholder="nome metodo, endpoint o path file"
+              class="sb-input-full"
+            />
+            <button
+              type="button"
+              id="impact-run"
+              class="sb-btn sb-btn-primary"
+              style="margin-top: 6px"
+            >
+              Analizza
+            </button>
+          </div>
+          <div class="sb-section">
+            <div class="sb-section-title">⚙ PARAMETRI</div>
+            <div class="sb-grid-2">
+              <div class="sb-field">
+                <label class="sb-field-label">Distanza</label>
+                <input
+                  type="number"
+                  id="impact-depth"
+                  value="3"
+                  min="1"
+                  max="8"
+                  class="sb-input"
+                />
+              </div>
+              <div class="sb-field">
+                <label class="sb-field-label">Direzione</label>
+                <select id="impact-direction" class="sb-input">
+                  <option value="downstream">Downstream</option>
+                  <option value="upstream">Upstream</option>
+                </select>
+              </div>
+            </div>
+            <label class="sb-field-label">Modalità</label>
+            <select id="impact-mode" class="sb-input">
+              <option value="transitive">Transitive</option>
+              <option value="direct">Direct</option>
+            </select>
+            <label class="sb-check-inline" style="margin-top: 8px">
+              <input type="checkbox" id="impact-v2" checked /> v2 typed
+            </label>
+            <label class="sb-check-inline">
+              <input type="checkbox" id="impact-cross-layer" /> Cross-layer API
+            </label>
+          </div>
+        </aside>
+        <div class="panel-main">
+          <div id="impact-results" class="scroll-panel"></div>
         </div>
-        <div class="toolbar">
-          <label>Depth <input type="number" id="lf-depth" value="2" min="1" max="4" style="width:3rem" /></label>
-          <label>Max nodi <input type="number" id="lf-max" value="100" min="10" max="300" style="width:4rem" /></label>
+      </section>
+
+      <!-- ── PANEL: Analisi ── -->
+      <section id="panel-analysis" class="panel">
+        <aside class="panel-sidebar">
+          <div class="sb-section">
+            <div class="sb-section-title">🔍 ANALISI</div>
+            <button
+              type="button"
+              id="analysis-recalc"
+              class="sb-btn sb-btn-primary"
+            >
+              🔄 Ricalcola analisi
+            </button>
+            <span
+              id="analysis-meta"
+              class="muted small"
+              style="margin-top: 6px; display: block"
+            ></span>
+          </div>
+        </aside>
+        <div class="panel-main">
+          <div id="analysis-sections" class="scroll-panel"></div>
         </div>
-        <p id="lf-status" class="muted"></p>
-        <label>Nome funzionalità <input type="text" id="lf-name" style="width:100%" /></label>
-        <ul id="lf-nodes" class="node-pick-list"></ul>
-        <button type="button" id="lf-save" class="primary" disabled>✅ Salva come funzionalità</button>
-      </div>
-    </section>
+        <div
+          id="analysis-info-modal"
+          class="info-modal hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="analysis-info-title"
+        >
+          <div class="info-modal-backdrop" id="analysis-info-backdrop"></div>
+          <div class="info-modal-box">
+            <h3 id="analysis-info-title"></h3>
+            <div id="analysis-info-body" class="info-modal-body"></div>
+            <button type="button" id="analysis-info-close" class="primary">
+              Chiudi
+            </button>
+          </div>
+        </div>
+      </section>
 
-    <section id="panel-sigma" class="panel active">
-      <div class="toolbar sigma-toolbar">
-        <input type="search" id="sigma-search" placeholder="Cerca file, metodo, DTO, endpoint (min 2 char per full detail)..." style="flex:1;min-width:12rem" />
-        <button type="button" id="sigma-search-btn" class="primary">Cerca</button>
-        <button type="button" id="sigma-fit">Fit</button>
-        <button type="button" id="sigma-reset" title="Vista file iniziale, senza filtri">Reset</button>
-        <button type="button" id="sigma-collapse" disabled>◁ File view</button>
-        <button type="button" id="sigma-full-detail">Full detail</button>
-      </div>
-      <div class="toolbar sigma-filters">
-        <label>Peso min <input type="number" id="sigma-min-weight" value="0" min="0" max="5" step="0.1" style="width:3rem" /></label>
-        <label title="0 = tutti i nodi (default). Max 100000.">Max nodi <input type="number" id="sigma-max-nodes" value="0" min="0" max="100000" step="100" style="width:5.5rem" /></label>
-        <label><input type="checkbox" id="sigma-show-labels" checked /> Etichette</label>
-        <label><input type="checkbox" id="sigma-show-edges" checked /> Archi</label>
-        <label><input type="checkbox" id="sigma-hide-private" checked /> Nascondi private</label>
-        <label><input type="checkbox" data-sigma-type="method" checked /> Metodi</label>
-        <label><input type="checkbox" data-sigma-type="dto" checked /> DTO</label>
-        <label><input type="checkbox" data-sigma-type="api_client_method" checked /> API client</label>
-        <label><input type="checkbox" data-sigma-type="api_endpoint" checked /> Endpoint</label>
-        <label><input type="checkbox" id="sigma-cross-layer" /> Cross-layer impact</label>
-        <label>Impact depth <input type="number" id="sigma-impact-depth" value="2" min="1" max="6" style="width:2.5rem" /></label>
-        <select id="sigma-impact-dir"><option value="downstream">Down</option><option value="upstream">Up</option></select>
-      </div>
-      <div class="toolbar">
-        <input type="text" id="sigma-path-from" placeholder="Path from (id o label)" style="flex:1" />
-        <input type="text" id="sigma-path-to" placeholder="Path to" style="flex:1" />
-        <button type="button" id="sigma-path-btn">Traccia percorso API</button>
-      </div>
-      <p id="sigma-path-result" class="muted small path-result"></p>
-      <p id="sigma-status" class="muted small"></p>
-      <div id="sigma-container" class="graph-container"></div>
-      <div id="sigma-impact-preview" class="sigma-impact-preview muted small"></div>
-      <div id="sigma-detail" class="sigma-detail-panel hidden">
-        <h3 id="sigma-detail-title">Dettaglio</h3>
-        <pre id="sigma-detail-body" class="sigma-detail-body"></pre>
-      </div>
-    </section>
-  </main>
+      <!-- ── PANEL: Funzionalità ── -->
+      <section id="panel-functions" class="panel">
+        <aside class="panel-sidebar">
+          <div class="sb-section">
+            <div class="sb-section-title">🏷 FUNZIONALITÀ</div>
+            <input
+              type="search"
+              id="fn-filter"
+              placeholder="Filtra funzionalità..."
+              class="sb-input-full"
+            />
+            <button
+              type="button"
+              id="fn-refresh"
+              class="sb-btn sb-btn-primary"
+              style="margin-top: 6px"
+            >
+              Aggiorna
+            </button>
+          </div>
+          <div class="sb-section">
+            <div class="sb-section-title">➕ CREA DA LABEL</div>
+            <input
+              type="text"
+              id="lf-input"
+              placeholder="pagina lista contratti"
+              class="sb-input-full"
+            />
+            <div class="sb-btn-row">
+              <button
+                type="button"
+                id="lf-search"
+                class="sb-btn sb-btn-primary"
+              >
+                🔍 Cerca
+              </button>
+            </div>
+            <div class="sb-grid-2">
+              <div class="sb-field">
+                <label class="sb-field-label">Depth</label>
+                <input
+                  type="number"
+                  id="lf-depth"
+                  value="2"
+                  min="1"
+                  max="4"
+                  class="sb-input"
+                />
+              </div>
+              <div class="sb-field">
+                <label class="sb-field-label">Max nodi</label>
+                <input
+                  type="number"
+                  id="lf-max"
+                  value="100"
+                  min="10"
+                  max="300"
+                  class="sb-input"
+                />
+              </div>
+            </div>
+            <p id="lf-status" class="muted small" style="margin: 4px 0"></p>
+            <label class="sb-field-label">Nome funzionalità</label>
+            <input type="text" id="lf-name" class="sb-input-full" />
+            <ul
+              id="lf-nodes"
+              class="node-pick-list"
+              style="margin: 6px 0; max-height: 120px"
+            ></ul>
+            <button
+              type="button"
+              id="lf-save"
+              class="sb-btn sb-btn-primary"
+              disabled
+            >
+              ✅ Salva come funzionalità
+            </button>
+          </div>
+        </aside>
+        <div class="panel-main">
+          <div id="fn-list" class="scroll-panel"></div>
+        </div>
+      </section>
 
-  <script src="/vendor/vis-network/vis-network.min.js"></script>
-  <script src="/vendor/sigma/graphology.umd.min.js"></script>
-  <script src="/vendor/sigma/sigma.min.js"></script>
-  <script src="/static/progress.js"></script>
-  <script src="/static/app.js"></script>
-  <script src="/static/symbols-view.js"></script>
-  <script src="/static/sigma-view.js"></script>
-</body>
+      <!-- ── PANEL: Sigma ── -->
+      <section id="panel-sigma" class="panel active sigma-panel">
+        <!-- Sidebar -->
+        <aside class="sigma-sidebar">
+          <!-- Search + azioni principali -->
+          <div class="sb-section">
+            <div class="sb-search-wrap">
+              <span class="sb-search-ico">&#128269;</span>
+              <input
+                type="search"
+                id="sigma-search"
+                placeholder="File, metodo, DTO, endpoint (min 2 char)…"
+                class="sb-search"
+                title="Cerca nodi nel grafo per nome, path file, tipo o qualifiedName. Con ≥2 caratteri attiva la ricerca full-text via API."
+              />
+            </div>
+            <div class="sb-btn-row">
+              <button
+                type="button"
+                id="sigma-search-btn"
+                class="sb-btn sb-btn-primary"
+                title="Esegue la ricerca e centra il grafo sul risultato"
+              >
+                Cerca
+              </button>
+              <button
+                type="button"
+                id="sigma-fit"
+                class="sb-btn sb-btn-ghost"
+                title="Adatta la vista per mostrare tutti i nodi"
+              >
+                Fit
+              </button>
+              <button
+                type="button"
+                id="sigma-reset"
+                class="sb-btn sb-btn-ghost"
+                title="Vista file iniziale, senza filtri"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                id="sigma-back"
+                class="sb-btn sb-btn-ghost"
+                title="Torna alla vista precedente"
+                disabled
+              >
+                &#8592; Indietro
+              </button>
+            </div>
+            <div class="sb-btn-row">
+              <button
+                type="button"
+                id="sigma-collapse"
+                class="sb-btn sb-btn-ghost sb-btn-full"
+                title="Torna alla vista per file, collassando i dettagli interni"
+                disabled
+              >
+                ◁ File view
+              </button>
+              <button
+                type="button"
+                id="sigma-full-detail"
+                class="sb-btn sb-btn-ghost sb-btn-full"
+                title="Carica il grafo completo con metodi, classi, DTO ed endpoint interni a ogni file"
+              >
+                Full detail
+              </button>
+            </div>
+          </div>
+
+          <!-- Search highlight option -->
+          <div class="sb-section" style="padding: 8px 16px">
+            <label
+              class="sb-check-inline"
+              title="Se attivo, dopo la ricerca il nodo trovato viene colorato in arancione e ingrandito"
+            >
+              <input type="checkbox" id="sigma-highlight-found" checked />
+              Evidenzia nodo trovato
+            </label>
+          </div>
+
+          <!-- Filtri Progetto / Cartella -->
+          <div class="sb-section">
+            <div class="sb-section-title">
+              <span class="sb-section-ico">◉</span> PROGETTO / CARTELLA
+            </div>
+            <div
+              style="
+                padding: 4px 0 8px 0;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+              "
+            >
+              <div
+                class="ms-combo"
+                id="ms-project-combo"
+                data-placeholder="Progetto…"
+                title="Seleziona uno o più progetti"
+              >
+                <div class="ms-combo-box">
+                  <div class="ms-combo-tags" id="ms-project-tags"></div>
+                  <input
+                    class="ms-combo-input"
+                    id="sigma-filter-project-q"
+                    placeholder="Progetto…"
+                    autocomplete="off"
+                  />
+                </div>
+                <div class="ms-combo-drop" id="ms-project-drop"></div>
+                <input type="hidden" id="sigma-filter-project" />
+              </div>
+              <div
+                class="ms-combo"
+                id="ms-folder-combo"
+                data-placeholder="Cartella…"
+                title="Seleziona una o più cartelle"
+              >
+                <div class="ms-combo-box">
+                  <div class="ms-combo-tags" id="ms-folder-tags"></div>
+                  <input
+                    class="ms-combo-input"
+                    id="sigma-filter-folder-q"
+                    placeholder="Cartella…"
+                    autocomplete="off"
+                  />
+                </div>
+                <div class="ms-combo-drop" id="ms-folder-drop"></div>
+                <input type="hidden" id="sigma-filter-folder" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Tipo nodo -->
+          <div class="sb-section">
+            <div class="sb-section-title">
+              <span class="sb-section-ico">⬡</span> TIPO NODO
+            </div>
+            <div class="sb-check-grid">
+              <label
+                class="sb-check-pill"
+                title="Mostra/nascondi nodi di tipo File sorgente (.cs, .ts, ecc.)"
+              >
+                <input type="checkbox" data-sigma-type="file" checked />
+                <span>File</span>
+              </label>
+              <label
+                class="sb-check-pill"
+                title="Mostra/nascondi classi estratte dai file sorgente"
+              >
+                <input type="checkbox" data-sigma-type="class" checked />
+                <span>Classi</span>
+              </label>
+              <label
+                class="sb-check-pill"
+                title="Mostra/nascondi metodi e funzioni estratti dal codice"
+              >
+                <input type="checkbox" data-sigma-type="method" checked />
+                <span>Metodi</span>
+              </label>
+              <label
+                class="sb-check-pill"
+                title="Mostra/nascondi DTO (Data Transfer Object) e modelli dati"
+              >
+                <input type="checkbox" data-sigma-type="dto" checked />
+                <span>DTO</span>
+              </label>
+              <label
+                class="sb-check-pill"
+                title="Mostra/nascondi file client API generati (es. proxy HTTP)"
+              >
+                <input
+                  type="checkbox"
+                  data-sigma-type="api_client_file"
+                  checked
+                />
+                <span>API file</span>
+              </label>
+              <label
+                class="sb-check-pill"
+                title="Mostra/nascondi metodi di client HTTP (chiamate verso servizi esterni)"
+              >
+                <input
+                  type="checkbox"
+                  data-sigma-type="api_client_method"
+                  checked
+                />
+                <span>API Client</span>
+              </label>
+              <label
+                class="sb-check-pill"
+                title="Mostra/nascondi endpoint REST esposti dal progetto (GET, POST, ecc.)"
+              >
+                <input type="checkbox" data-sigma-type="api_endpoint" checked />
+                <span>Endpoint</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Visualizzazione -->
+          <div class="sb-section">
+            <div class="sb-section-title">
+              <span class="sb-section-ico">◎</span> VISUALIZZAZIONE
+            </div>
+            <div class="sb-pill-row">
+              <label
+                class="sb-pill"
+                title="Mostra o nasconde le etichette testuali dei nodi sul grafo"
+              >
+                <input type="checkbox" id="sigma-show-labels" checked />
+                <span>Etichette</span>
+              </label>
+              <label
+                class="sb-pill"
+                title="Mostra o nasconde gli archi (dipendenze) tra i nodi"
+              >
+                <input type="checkbox" id="sigma-show-edges" checked />
+                <span>Archi</span>
+              </label>
+            </div>
+            <div class="sb-pill-row">
+              <label
+                class="sb-pill"
+                title="Attiva il layout a zone per progetto/cartella (disattiva per layout circolare semplice)"
+              >
+                <input type="checkbox" id="sigma-zone-view" checked />
+                <span>Vista a zone</span>
+              </label>
+            </div>
+            <label
+              class="sb-check-inline"
+              title="Se attivo, nasconde i metodi privati (visibility=private) dal grafo"
+            >
+              <input type="checkbox" id="sigma-hide-private" checked />
+              <span>Nascondi private</span>
+            </label>
+            <div class="sb-grid-2">
+              <div class="sb-field">
+                <label
+                  class="sb-field-label"
+                  for="sigma-min-weight"
+                  title="Filtra gli archi con peso inferiore a questo valore. 0 = mostra tutto."
+                  >PESO MIN</label
+                >
+                <input
+                  type="number"
+                  id="sigma-min-weight"
+                  value="0"
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  class="sb-input"
+                />
+              </div>
+              <div class="sb-field">
+                <label
+                  class="sb-field-label"
+                  for="sigma-max-nodes"
+                  title="Limita il numero di nodi renderizzati. 0 = nessun limite (default)."
+                  >MAX NODI</label
+                >
+                <input
+                  type="number"
+                  id="sigma-max-nodes"
+                  value="0"
+                  min="0"
+                  max="100000"
+                  step="100"
+                  class="sb-input"
+                />
+              </div>
+              <div class="sb-field">
+                <label
+                  class="sb-field-label"
+                  for="sigma-impact-depth"
+                  title="Profondità di traversal per l'analisi d'impatto: quanti livelli di dipendenze esplorare."
+                  >IMPACT DEPTH</label
+                >
+                <input
+                  type="number"
+                  id="sigma-impact-depth"
+                  value="2"
+                  min="1"
+                  max="6"
+                  class="sb-input"
+                />
+              </div>
+              <div class="sb-field">
+                <label
+                  class="sb-field-label"
+                  for="sigma-impact-dir"
+                  title="Direzione dell'analisi d'impatto: Down = chi dipende da questo nodo, Up = da chi dipende."
+                  >DIR.</label
+                >
+                <select id="sigma-impact-dir" class="sb-input">
+                  <option value="downstream">Down</option>
+                  <option value="upstream">Up</option>
+                </select>
+              </div>
+            </div>
+            <label
+              class="sb-check-inline"
+              title="Se attivo, l'analisi d'impatto attraversa i confini di layer (es. da BE a FE via API)"
+            >
+              <input type="checkbox" id="sigma-cross-layer" />
+              <span>Cross-layer impact</span>
+            </label>
+          </div>
+
+          <!-- Funzionalità -->
+          <div class="sb-section">
+            <div class="sb-section-title">
+              <span class="sb-section-ico">🏷</span> FUNZIONALITÀ
+            </div>
+            <select id="sigma-func-select" class="sb-input">
+              <option value="">Tutte</option>
+            </select>
+          </div>
+
+          <!-- Traccia percorso -->
+          <div class="sb-section">
+            <div class="sb-section-title">
+              <span class="sb-section-ico">⇅</span> TRACCIA PERCORSO
+            </div>
+            <input
+              type="text"
+              id="sigma-path-from"
+              placeholder="Path from (id o label)"
+              title="Nodo di partenza per la ricerca del percorso API. Inserisci l'ID o il label del nodo."
+              class="sb-input-full"
+            />
+            <input
+              type="text"
+              id="sigma-path-to"
+              placeholder="Path to"
+              title="Nodo di destinazione per la ricerca del percorso API più breve."
+              class="sb-input-full"
+            />
+            <button
+              type="button"
+              id="sigma-path-btn"
+              class="sb-btn sb-btn-outline sb-btn-full"
+            >
+              Traccia percorso API
+            </button>
+            <p id="sigma-path-result" class="muted small path-result"></p>
+          </div>
+
+          <!-- Footer status -->
+          <div class="sb-spacer"></div>
+          <div class="sb-footer">
+            <p id="sigma-status" class="sb-status muted small"></p>
+          </div>
+        </aside>
+
+        <!-- Canvas area -->
+        <div class="sigma-canvas-wrap">
+          <!-- Info box nodo selezionato -->
+          <div id="sigma-node-info" class="sigma-node-info hidden">
+            <div class="sigma-node-info-content">
+              <span
+                id="sigma-node-info-icon"
+                class="sigma-node-info-type"
+              ></span>
+              <span
+                id="sigma-node-info-label"
+                class="sigma-node-info-label"
+              ></span>
+              <span
+                id="sigma-node-info-path"
+                class="sigma-node-info-path"
+              ></span>
+              <span
+                id="sigma-node-info-conn"
+                class="sigma-node-info-conn"
+              ></span>
+            </div>
+            <button
+              id="sigma-node-info-close"
+              class="sigma-node-info-close"
+              title="Chiudi"
+            >
+              &times;
+            </button>
+          </div>
+          <div id="sigma-container" class="graph-container"></div>
+
+          <!-- Floating zoom controls -->
+          <div class="sigma-zoom-btns">
+            <button class="zoom-btn" id="sigma-zoom-in" title="Zoom in">
+              +
+            </button>
+            <button class="zoom-btn" id="sigma-zoom-out" title="Zoom out">
+              −
+            </button>
+            <button class="zoom-btn" id="sigma-zoom-fit" title="Fit">
+              &#8982;
+            </button>
+          </div>
+
+          <!-- Detail panel -->
+          <div id="sigma-detail" class="sigma-detail-panel hidden">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 8px;
+              "
+            >
+              <h3 id="sigma-detail-title" style="margin: 0">Dettaglio</h3>
+              <button
+                id="sigma-detail-close"
+                type="button"
+                class="btn btn-sm"
+                style="padding: 2px 8px; font-size: 11px"
+              >
+                Chiudi
+              </button>
+            </div>
+            <div id="sigma-detail-body" class="sigma-detail-body"></div>
+            <div
+              id="sigma-detail-actions"
+              style="margin-top: 8px; display: none"
+            >
+              <button
+                id="sigma-detail-expand"
+                type="button"
+                class="btn btn-primary btn-sm"
+                style="width: 100%"
+              >
+                Espandi dettaglio
+              </button>
+            </div>
+            <div style="margin-top: 8px; display: flex; gap: 6px">
+              <button
+                id="sigma-detail-view-graph"
+                type="button"
+                class="btn btn-primary btn-sm"
+                style="flex: 1"
+              >
+                Visualizza suo grafo
+              </button>
+            </div>
+          </div>
+
+          <!-- Impact preview -->
+          <div
+            id="sigma-impact-preview"
+            class="sigma-impact-preview muted small"
+          ></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/vendor/vis-network/vis-network.min.js"></script>
+    <script src="/vendor/sigma/graphology.umd.min.js"></script>
+    <script src="/vendor/sigma/sigma.min.js"></script>
+    <script src="/static/progress.js"></script>
+    <script src="/static/app.js"></script>
+    <script src="/static/symbols-view.js"></script>
+    <script src="/static/sigma-view.js?v=28"></script>
+    <script>
+      /* Sync zoom buttons → sigma camera */
+      (function () {
+        function getSigma() {
+          return window.chSigmaView?.getSigma?.();
+        }
+        document
+          .getElementById("sigma-zoom-in")
+          ?.addEventListener("click", () => {
+            const s = getSigma();
+            if (s) {
+              const c = s.getCamera();
+              c.animatedZoom({ factor: 1.5 });
+            }
+          });
+        document
+          .getElementById("sigma-zoom-out")
+          ?.addEventListener("click", () => {
+            const s = getSigma();
+            if (s) {
+              const c = s.getCamera();
+              c.animatedUnzoom({ factor: 1.5 });
+            }
+          });
+        document
+          .getElementById("sigma-zoom-fit")
+          ?.addEventListener("click", () => {
+            const s = getSigma();
+            if (s) s.getCamera().animatedReset({ duration: 300 });
+            else document.getElementById("sigma-fit")?.click();
+          });
+        /* Mirror status-line in sidebar */
+        const obs = new MutationObserver(() => {
+          const sl = document.getElementById("status-line-sigma");
+          const src = document.getElementById("status-line");
+          if (sl && src) sl.textContent = src.textContent;
+        });
+        const src = document.getElementById("status-line");
+        if (src)
+          obs.observe(src, {
+            childList: true,
+            characterData: true,
+            subtree: true,
+          });
+      })();
+    </script>
+  </body>
 </html>
