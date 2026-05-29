@@ -32,6 +32,12 @@
           <button type="button" class="tab" data-tab="functions">
             Funzionalità
           </button>
+          <button type="button" class="tab" data-tab="sunburst">
+            Sunburst
+          </button>
+          <button type="button" class="tab" data-tab="tree">
+            Tree of Life
+          </button>
         </nav>
       </div>
       <div class="app-header-right">
@@ -933,11 +939,134 @@
           </div>
         </aside>
       </section>
+
+      <!-- ── PANEL: Sunburst ── -->
+      <section id="panel-sunburst" class="panel">
+        <aside class="panel-sidebar">
+          <div class="sb-section">
+            <div class="sb-section-title">☀ SUNBURST</div>
+            <label class="sb-field-label">Modalità gerarchica</label>
+            <select id="sunburst-mode" class="sb-input">
+              <option value="project">Project → Folder → File</option>
+              <option value="project-detail">
+                Project → Folder → File → Details
+              </option>
+              <option value="community">
+                Community → Project → Folder → File
+              </option>
+              <option value="community-detail">
+                Community → Project → Folder → File → Details
+              </option>
+            </select>
+            <div class="sb-btn-row" style="margin-top: 6px">
+              <button
+                type="button"
+                id="sunburst-zoom-in"
+                class="sb-btn sb-btn-ghost"
+                title="Zoom in"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                id="sunburst-zoom-out"
+                class="sb-btn sb-btn-ghost"
+                title="Zoom out"
+              >
+                −
+              </button>
+              <button
+                type="button"
+                id="sunburst-fit"
+                class="sb-btn sb-btn-ghost"
+                title="Fit"
+              >
+                ⛶
+              </button>
+            </div>
+            <button
+              type="button"
+              id="sunburst-reset"
+              class="sb-btn sb-btn-primary"
+              style="margin-top: 6px"
+            >
+              Reset view
+            </button>
+          </div>
+          <div class="sb-section">
+            <p class="muted small" style="margin: 0">
+              Vista circolare compatta. Clicca su un anello per entrare; clicca
+              al centro per tornare indietro.
+            </p>
+          </div>
+        </aside>
+        <div class="panel-main" style="padding: 0; overflow: hidden">
+          <div id="sunburst-container" style="width: 100%; height: 100%"></div>
+        </div>
+      </section>
+
+      <!-- ── PANEL: Tree of Life ── -->
+      <section id="panel-tree" class="panel">
+        <aside class="panel-sidebar">
+          <div class="sb-section">
+            <div class="sb-section-title">🌳 TREE OF LIFE</div>
+            <label class="sb-field-label">Modalità gerarchica</label>
+            <select id="tree-mode" class="sb-input">
+              <option value="project">Project → Folder → File</option>
+              <option value="project-detail">
+                Project → Folder → File → Details
+              </option>
+              <option value="community">
+                Community → Project → Folder → File
+              </option>
+              <option value="community-detail">
+                Community → Project → Folder → File → Details
+              </option>
+            </select>
+            <div class="sb-btn-row" style="margin-top: 6px">
+              <button
+                type="button"
+                id="tree-expand"
+                class="sb-btn sb-btn-ghost"
+              >
+                Espandi
+              </button>
+              <button
+                type="button"
+                id="tree-collapse"
+                class="sb-btn sb-btn-ghost"
+              >
+                Collassa
+              </button>
+            </div>
+            <button
+              type="button"
+              id="tree-reset"
+              class="sb-btn sb-btn-primary sb-btn-full"
+              style="margin-top: 6px"
+            >
+              Reset view
+            </button>
+          </div>
+          <div class="sb-section">
+            <p class="muted small" style="margin: 0">
+              Albero radiale navigabile. Clicca sui nodi per
+              espandere/collassare i rami. Usa lo scroll per zoomare.
+            </p>
+          </div>
+        </aside>
+        <div class="panel-main" style="padding: 0; overflow: hidden">
+          <div id="tree-container" style="width: 100%; height: 100%"></div>
+        </div>
+      </section>
     </main>
 
     <script src="/vendor/vis-network/vis-network.min.js"></script>
     <script type="module" src="/static/load-3d-graph.js"></script>
     <script src="/static/progress.js"></script>
+    <script src="/static/vendor/d3.v7.min.js?v=2"></script>
+    <script src="/static/vendor/sunburst-chart.min.js?v=2"></script>
+    <script src="/static/hierarchy-views.js?v=18"></script>
     <script src="/static/app.js"></script>
     <script src="/static/symbols-view.js"></script>
     <script src="/static/force-graph-view.js?v=35"></script>
