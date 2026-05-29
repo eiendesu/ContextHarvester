@@ -122,6 +122,10 @@ foreach (var file in EnumerateFilesSafe(repoRoot))
                     });
                 }
             }
+
+            // Extract raw call edges from this method body
+            var methodCalls = CallEdgeExtractor.ExtractRawCalls(method, rel, className, mName);
+            fileEntry.RawCalls.AddRange(methodCalls);
         }
     }
 
@@ -186,6 +190,7 @@ sealed class FileEntry
     public List<ClassEntry> Classes { get; set; } = new();
     public List<MethodEntry> Methods { get; set; } = new();
     public List<EndpointEntry> Endpoints { get; set; } = new();
+    public List<RawCall> RawCalls { get; set; } = new();
 }
 
 sealed class ClassEntry
@@ -215,4 +220,60 @@ sealed class EndpointEntry
     public string ClassRoute { get; set; } = "";
     public int Line { get; set; }
     public string QualifiedName { get; set; } = "";
+}
+
+sealed class RawCall
+{
+    public string FromFile { get; set; } = "";
+    public string FromClass { get; set; } = "";
+    public string FromMethod { get; set; } = "";
+    public string TargetClassRaw { get; set; } = "";
+    public string TargetMethod { get; set; } = "";
+    public int Line { get; set; }
+}
+
+static class CallEdgeExtractor
+{
+    public static List<RawCall> ExtractRawCalls(MethodDeclarationSyntax method, string currentFile, string currentClass, string currentMethod)
+    {
+        var edges = new List<RawCall>();
+        if (method.Body == null && method.ExpressionBody == null)
+            return edges;
+
+        var nodes = method.Body?.DescendantNodes() ?? method.ExpressionBody?.DescendantNodes();
+        if (nodes == null) return edges;
+
+        foreach (var invocation in nodes.OfType<InvocationExpressionSyntax>())
+        {
+            string? targetClass = null;
+            string? targetMethod = null;
+
+            // pattern: NomeClasse.NomeMetodo(...) or this.NomeMetodo(...)
+            if (invocation.Expression is MemberAccessExpressionSyntax memberAccess)
+            {
+                targetClass = memberAccess.Expression.ToString();
+                targetMethod = memberAccess.Name.Identifier.Text;
+            }
+            // pattern: NomeMetodo(...) — standalone call
+            else if (invocation.Expression is IdentifierNameSyntax identifier)
+            {
+                targetClass = currentClass;
+                targetMethod = identifier.Identifier.Text;
+            }
+
+            if (!string.IsNullOrEmpty(targetMethod))
+            {
+                edges.Add(new RawCall
+                {
+                    FromFile = currentFile,
+                    FromClass = currentClass,
+                    FromMethod = currentMethod,
+                    TargetClassRaw = targetClass ?? "",
+                    TargetMethod = targetMethod,
+                    Line = invocation.GetLocation().GetLineSpan().StartLinePosition.Line + 1
+                });
+            }
+        }
+        return edges;
+    }
 }

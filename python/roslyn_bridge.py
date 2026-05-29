@@ -219,6 +219,23 @@ def merge_roslyn_into_symbol_v2(
             )
 
 
+def extract_raw_calls_from_roslyn(scan: dict[str, Any]) -> list[dict[str, Any]]:
+    """Extract raw call edges from Roslyn scan output for call-edge resolution."""
+    raw_calls: list[dict[str, Any]] = []
+    for fe in scan.get("files") or []:
+        rel = fe.get("path") or ""
+        for rc in fe.get("rawCalls") or []:
+            raw_calls.append({
+                "fromFile": rel,
+                "fromClass": rc.get("fromClass", ""),
+                "fromMethod": rc.get("fromMethod", ""),
+                "targetClassRaw": rc.get("targetClassRaw", ""),
+                "targetMethod": rc.get("targetMethod", ""),
+                "line": rc.get("line", 0),
+            })
+    return raw_calls
+
+
 def roslyn_backend_endpoints(scan: dict[str, Any], repo: Path) -> list[dict[str, Any]]:
     """Convert Roslyn scan to backend_route_index endpoint records."""
     from route_normalize import expand_action_token, expand_controller_token, normalize_path, route_key

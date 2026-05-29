@@ -8,12 +8,12 @@ Estensione **VS Code / Cursor** che offre una ricerca semantica sul codebase **i
 
 ## I 4 layer (modulari)
 
-| Layer | Cosa fa | Quando usarlo |
-|-------|---------|---------------|
-| **1 — Context Harvester** | Retrieval semantico per feature | Sempre |
-| **2 — Functional Analysis** | Mappa funzionalità del progetto (`functional_map.json`) | Progetti grandi, una tantum |
-| **3 — Graph View + Report** | Visualizza il grafo, `GRAPH_REPORT.md` | Esplorare il codebase |
-| **4 — MCP Server** | Tool MCP per AI assistant in chat | Se usi Copilot Agent / Roo Code |
+| Layer                       | Cosa fa                                                 | Quando usarlo                   |
+| --------------------------- | ------------------------------------------------------- | ------------------------------- |
+| **1 — Context Harvester**   | Retrieval semantico per feature                         | Sempre                          |
+| **2 — Functional Analysis** | Mappa funzionalità del progetto (`functional_map.json`) | Progetti grandi, una tantum     |
+| **3 — Graph View + Report** | Visualizza il grafo, `GRAPH_REPORT.md`                  | Esplorare il codebase           |
+| **4 — MCP Server**          | Tool MCP per AI assistant in chat                       | Se usi Copilot Agent / Roo Code |
 
 ## Cosa fa (Layer 1)
 
@@ -60,7 +60,7 @@ Lo script propone anche:
 1. Apri il workspace.
 2. Sidebar **Context Harvester v3**.
 3. **Rebuild Index**.
-4. *(Opzionale)* **Rigenera analisi** → **Valida community** → **Apri Graph View**.
+4. _(Opzionale)_ **Rigenera analisi** → **Valida community** → **Apri Graph View**.
 5. Feature + CARD ID → **Genera Contesto**.
 
 ## Layer 2 — Functional Analysis
@@ -85,12 +85,12 @@ GRAPH_REPORT.md
 
 Tab disponibili:
 
-| Tab | Contenuto |
-|-----|-----------|
-| **Grafo** | vis.js, ricerca, filtro community |
-| **Impact** | file impattati per distanza da un nodo |
-| **Analisi** | dead code, cicli, hotspot, test gap, funzioni simili, edge API |
-| **Funzionalità** | lista `functional_map.json`, **crea da label** |
+| Tab              | Contenuto                                                      |
+| ---------------- | -------------------------------------------------------------- |
+| **Grafo**        | vis.js, ricerca, filtro community                              |
+| **Impact**       | file impattati per distanza da un nodo                         |
+| **Analisi**      | dead code, cicli, hotspot, test gap, funzioni simili, edge API |
+| **Funzionalità** | lista `functional_map.json`, **crea da label**                 |
 
 ### Tre modalità per la mappa funzionalità
 
@@ -105,58 +105,81 @@ name_lookup.json      — mapping classe → file
 graph_analysis.json   — cache analisi NetworkX
 ```
 
-## Layer 3b — Graph v5 (typed graph + Sigma.js)
+## Layer 3b — Graph v5 (typed graph + 3D Force Graph)
 
 Dopo **reindex** (con `v2Symbols` / `v2ApiMatching`) e **Functional Analysis**, in `.context-harvester/`:
 
-| File | Contenuto |
-|------|-----------|
-| `symbol_index_v2.json` | nodi/edge tipizzati (file, class, method, DTO, API client) |
-| `api_client_index.json` | funzioni frontend fetch/axios |
-| `backend_route_index.json` | action ASP.NET con route normalizzate |
-| `api_links.json` | match frontend↔backend con `confidence` |
-| `graph_detail.json` | grafo fine-grained completo |
-| `graph_file.json` | vista aggregata file-level (derivata) |
-| `graph_expansion_index.json` | mappa file → nodi da espandere |
-| `impact_index.json` | upstream/downstream per impact v2 |
+| File                         | Contenuto                                                  |
+| ---------------------------- | ---------------------------------------------------------- |
+| `symbol_index_v2.json`       | nodi/edge tipizzati (file, class, method, DTO, API client) |
+| `api_client_index.json`      | funzioni frontend fetch/axios                              |
+| `backend_route_index.json`   | action ASP.NET con route normalizzate                      |
+| `api_links.json`             | match frontend↔backend con `confidence`                    |
+| `graph_detail.json`          | grafo fine-grained completo                                |
+| `graph_file.json`            | vista aggregata file-level (derivata)                      |
+| `graph_expansion_index.json` | mappa file → nodi da espandere                             |
+| `impact_index.json`          | upstream/downstream per impact v2                          |
 
-Tab **Grafo v5** nella web app: Sigma.js (file view + click per expanded file view). API: `/api/graph/file`, `/api/graph/detail`, `/api/graph/expand`, `/api/graph/impact-v2/{id}`.
+Tab **Grafo v5** nella web app: 3D Force Graph (file view + click per expanded file view). API: `/api/graph/file`, `/api/graph/detail`, `/api/graph/expand`, `/api/graph/impact-v2/{id}`.
 
-Parser C# backend: regex migliorato (Roslyn pianificato). TypeScript API: regex su export + fetch/axios.
+### Call Edges (inter-procedural)
+
+Dopo il reindex, il sistema estrae raw call edges da C# (RoslynHarvester `CallEdgeExtractor`) e TypeScript (`ts_parser.py`), poi risolve in cascata:
+
+| Fase       | Descrizione                                                   | Default |
+| ---------- | ------------------------------------------------------------- | ------- |
+| **Fase 1** | Match diretto su `name_lookup.byClassName`                    | ON      |
+| **Fase 2** | DI resolution: interfaccia → implementazione concreta         | ON      |
+| **Fase 3** | Semantic resolution (Roslyn `SemanticModel`, TS compiler API) | OFF     |
+
+File prodotti in `.context-harvester/`:
+
+| File                         | Contenuto                                     |
+| ---------------------------- | --------------------------------------------- |
+| `call_edges_raw_cs.json`     | Raw calls da C#                               |
+| `call_edges_raw_ts.json`     | Raw calls da TypeScript                       |
+| `call_edges_resolved.json`   | Edge `calls` risolti (da aggiungere al grafo) |
+| `call_resolution_stats.json` | Copertura risoluzione                         |
+
+Parser C# backend: RoslynHarvester con `CallEdgeExtractor`. TypeScript API: tree-sitter + regex fallback.
 
 ### Settings v5
 
-| Setting | Default |
-|---------|---------|
-| `v2Symbols` | true |
-| `v2ApiMatching` | true |
-| `sigmaViewer` | true |
-| `useRoslyn` | true (richiede .NET 8 SDK per `tools/RoslynHarvester`) |
-| `semanticChunking` | false (tree-sitter per chunk ChromaDB) |
+| Setting            | Default                                                |
+| ------------------ | ------------------------------------------------------ |
+| `v2Symbols`        | true                                                   |
+| `v2ApiMatching`    | true                                                   |
+| `sigmaViewer`      | true                                                   |
+| `useRoslyn`        | true (richiede .NET 8 SDK per `tools/RoslynHarvester`) |
+| `semanticChunking` | false (tree-sitter per chunk ChromaDB)                 |
 
 ### Parser e viewer (milestone 5 complete)
 
-| Componente | Tecnologia |
-|------------|------------|
-| C# symbols/routes | **Roslyn** (`tools/RoslynHarvester`) + regex fallback |
-| TypeScript API | **tree-sitter** (`ts_parser.py`) + regex fallback |
-| Import graph | `import_graph.json` (caller → API client) |
-| Viewer principale | **Sigma.js** — file view, expanded file, full detail con filtri |
-| Impact | v2 typed: upstream/downstream, direct/transitive, cross-layer API |
-| Percorsi | `GET /api/graph/path?source=&target=` |
+| Componente        | Tecnologia                                                            |
+| ----------------- | --------------------------------------------------------------------- |
+| C# symbols/routes | **Roslyn** (`tools/RoslynHarvester`) + regex fallback                 |
+| TypeScript API    | **tree-sitter** (`ts_parser.py`) + regex fallback                     |
+| Import graph      | `import_graph.json` (caller → API client)                             |
+| Viewer principale | **3D Force Graph** — file view, expanded file, full detail con filtri |
+| Impact            | v2 typed: upstream/downstream, direct/transitive, cross-layer API     |
+| Percorsi          | `GET /api/graph/path?source=&target=`                                 |
 
-Tab **Grafo** (Sigma) è il default nella web app; **Grafo (legacy)** resta vis-network.
+Tab **Grafo** (3D) è il default nella web app; **Grafo (legacy)** resta vis-network.
 
 ### Settings v4
 
-| Setting | Default |
-|---------|---------|
-| `graph.normalizeNodeNames` | true |
-| `graph.reassignUnassigned` | true |
-| `graph.labelFirst.traversalDepth` | 2 |
-| `graph.labelFirst.maxNodes` | 100 |
-| `ollama.labelExpansion.model` | qwen3:4b |
-| `webapp.autoOpenBrowser` | true |
+| Setting                              | Default  |
+| ------------------------------------ | -------- |
+| `callEdges.enabled`                  | true     |
+| `callEdges.enableLevelA`             | true     |
+| `callEdges.enableDIResolution`       | true     |
+| `callEdges.enableSemanticResolution` | false    |
+| `graph.normalizeNodeNames`           | true     |
+| `graph.reassignUnassigned`           | true     |
+| `graph.labelFirst.traversalDepth`    | 2        |
+| `graph.labelFirst.maxNodes`          | 100      |
+| `ollama.labelExpansion.model`        | qwen3:4b |
+| `webapp.autoOpenBrowser`             | true     |
 
 ## Layer 4 — MCP Server
 
@@ -176,22 +199,22 @@ Tool esposti: `generate_context`, `search_codebase`, `get_function_info`, `get_i
 
 ## Profili AI
 
-| Profilo | Uso |
-|---------|-----|
-| `laptop-balanced` | Raccomandato laptop |
-| `laptop-speed` / `laptop-quality` | Velocità vs qualità |
-| `minisforum-*` | Server Ollama remoto (RTX 3090) |
+| Profilo                           | Uso                             |
+| --------------------------------- | ------------------------------- |
+| `laptop-balanced`                 | Raccomandato laptop             |
+| `laptop-speed` / `laptop-quality` | Velocità vs qualità             |
+| `minisforum-*`                    | Server Ollama remoto (RTX 3090) |
 
 ## Settings principali
 
-| Setting | Default | Descrizione |
-|---------|---------|-------------|
-| `enableFunctionalAnalysis` | false | Auto-run analisi se manca functional_map |
-| `graph.minCommunitySize` | 3 | Community minime |
-| `graph.autoValidate` | false | Salta UI validazione |
-| `enableMcpServer` | false | Layer 4 |
-| `mcp.port` | 3456 | Porta MCP |
-| `enableConfidenceScore` | false | Score 1–10 opzionale |
+| Setting                    | Default | Descrizione                              |
+| -------------------------- | ------- | ---------------------------------------- |
+| `enableFunctionalAnalysis` | false   | Auto-run analisi se manca functional_map |
+| `graph.minCommunitySize`   | 3       | Community minime                         |
+| `graph.autoValidate`       | false   | Salta UI validazione                     |
+| `enableMcpServer`          | false   | Layer 4                                  |
+| `mcp.port`                 | 3456    | Porta MCP                                |
+| `enableConfidenceScore`    | false   | Score 1–10 opzionale                     |
 
 ## Sviluppo
 

@@ -16,28 +16,28 @@ L'impostazione di partenza, ricavata dallo stack attuale condiviso, è questa:
 
 ### Pipeline Reindex
 
-| Area | Stato attuale |
-|---|---|
+| Area           | Stato attuale                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------- |
 | Orchestrazione | Estensione VS Code / Cursor con comando `rebuild_index` che invoca `python/orchestrator.py` |
-| Phase 0 | `phase0_vocabulary.py` estrae vocabolario progetto via regex |
-| Phase 1 | ChromaDB locale in `.context-harvester/chroma/` |
-| Embedding | Ollama con `nomic-embed-text` |
-| Chunking | Sliding window (`chunksize` / `chunkoverlap`) via `common.chunk_text_sliding` |
-| Symbol index | `symbol_index.py` con regex su C#/TS/SQL, output `symbol_index.json` |
-| Incrementalità | Hash file in `index_meta.json` |
-| Storico | `index_timing.py` |
+| Phase 0        | `phase0_vocabulary.py` estrae vocabolario progetto via regex                                |
+| Phase 1        | ChromaDB locale in `.context-harvester/chroma/`                                             |
+| Embedding      | Ollama con `nomic-embed-text`                                                               |
+| Chunking       | Sliding window (`chunksize` / `chunkoverlap`) via `common.chunk_text_sliding`               |
+| Symbol index   | `symbol_index.py` con regex su C#/TS/SQL, output `symbol_index.json`                        |
+| Incrementalità | Hash file in `index_meta.json`                                                              |
+| Storico        | `index_timing.py`                                                                           |
 
 ### Pipeline Grafo
 
-| Area | Stato attuale |
-|---|---|
-| Input | `symbol_index.json` prodotto dal reindex |
-| Grafo | NetworkX file-to-file, serializzato anche in pickle |
-| Clustering | Leiden via graspologic, fallback Louvain |
-| Post-processing | `graph_reassign.py`, `name_lookup.py` |
-| AI opzionale | `label_first.py` con Ollama (`qwen3:4b` tipico) |
-| Analisi | `graph_analyses.py` per cicli / dead code / hotspot |
-| Output | `graph.json`, `functional_map.json`, `graph_analysis.json` |
+| Area            | Stato attuale                                                          |
+| --------------- | ---------------------------------------------------------------------- |
+| Input           | `symbol_index.json` prodotto dal reindex                               |
+| Grafo           | NetworkX file-to-file, serializzato anche in pickle                    |
+| Clustering      | Leiden via graspologic, fallback Louvain                               |
+| Post-processing | `graph_reassign.py`, `name_lookup.py`                                  |
+| AI opzionale    | `label_first.py` con Ollama (`qwen3:4b` tipico)                        |
+| Analisi         | `graph_analyses.py` per cicli / dead code / hotspot                    |
+| Output          | `graph.json`, `functional_map.json`, `graph_analysis.json`             |
 | Visualizzazione | vis-network in web app HTML + vanilla JS servita via FastAPI + uvicorn |
 
 ## Direzione architetturale
@@ -52,14 +52,14 @@ La nuova architettura deve supportare tre modalità di consultazione:
 
 ## Scelta visualizzazione
 
-La visualizzazione proposta è **Sigma.js** al posto di vis-network per le viste dense. Questa scelta è coerente con l'obiettivo di gestire drill-down e grafi più grandi, mantenendo la fluidità nel rendering lato browser. La vista file-level può anche continuare a convivere inizialmente con l'output attuale, ma il target finale è convergere su un unico viewer Sigma.js.
+La visualizzazione è **3D Force Graph** (Three.js + `3d-force-graph`) al posto di vis-network per le viste dense. Questa scelta è coerente con l'obiettivo di gestire drill-down e grafi più grandi, mantenendo la fluidità nel rendering lato browser. La vista file-level può anche continuare a convivere inizialmente con l'output attuale, ma il target finale è convergere su un unico viewer 3D.
 
 ### Motivazioni pratiche
 
 - vis-network regge la vista a file, ma degrada troppo su granularità a metodo.
-- Sigma.js è più adatto a rendering GPU/WebGL e quindi a grafi grandi.
+- 3D Force Graph sfrutta WebGL (Three.js) e offre interazione nativa (rotazione, zoom, pan) che si adatta bene a grafi eterogenei (file + metodi + endpoint).
 - L'applicazione non deve eseguire algoritmi grafici complessi nel browser; il frontend deve soprattutto filtrare, esplodere nodi e navigare.
-- La UX richiesta (click sul file, apertura dettaglio, vista full detail globale) è più naturale con un modello di subgraph dinamico.
+- La UX richiesta (click sul file, apertura dettaglio, vista full detail globale) è più naturale con un modello di subgraph dinamico e distanze link variabili per tipo di edge.
 
 ## Modello dati proposto
 
@@ -79,7 +79,8 @@ Il grafo deve passare da un modello implicito file-to-file a un modello esplicit
 ### Tipi di edge
 
 - `contains` — relazione gerarchica file → classe → metodo / dto
-- `calls` — chiamata tra metodi
+- `calls` — chiamata tra metodi (risolta via Fase 1 match diretto o Fase 2 DI resolution)
+- `calls_inferred` — chiamata tra metodi con confidenza intermedia (placeholder per espansioni future)
 - `imports` — import frontend / dipendenza esplicita
 - `references` — uso di simbolo senza invocazione diretta
 - `instantiates` — creazione oggetto
@@ -91,28 +92,28 @@ Il grafo deve passare da un modello implicito file-to-file a un modello esplicit
 
 ### Attributi minimi per nodo
 
-| Campo | Descrizione |
-|---|---|
-| `id` | identificatore stabile |
-| `type` | tipo nodo |
-| `label` | label visualizzata |
-| `qualifiedName` | nome completo simbolico |
-| `filePath` | file sorgente |
-| `lineStart` / `lineEnd` | posizione |
-| `language` | `csharp`, `typescript`, `sql`, ecc. |
-| `parentId` | nodo gerarchico padre |
-| `visibility` | public/private/internal se disponibile |
+| Campo                   | Descrizione                            |
+| ----------------------- | -------------------------------------- |
+| `id`                    | identificatore stabile                 |
+| `type`                  | tipo nodo                              |
+| `label`                 | label visualizzata                     |
+| `qualifiedName`         | nome completo simbolico                |
+| `filePath`              | file sorgente                          |
+| `lineStart` / `lineEnd` | posizione                              |
+| `language`              | `csharp`, `typescript`, `sql`, ecc.    |
+| `parentId`              | nodo gerarchico padre                  |
+| `visibility`            | public/private/internal se disponibile |
 
 ### Attributi minimi per edge
 
-| Campo | Descrizione |
-|---|---|
-| `source` | nodo sorgente |
-| `target` | nodo destinazione |
-| `type` | tipo edge |
-| `weight` | peso aggregato o frequenza |
-| `confidence` | affidabilità match |
-| `origin` | parser / regola che lo ha prodotto |
+| Campo        | Descrizione                        |
+| ------------ | ---------------------------------- |
+| `source`     | nodo sorgente                      |
+| `target`     | nodo destinazione                  |
+| `type`       | tipo edge                          |
+| `weight`     | peso aggregato o frequenza         |
+| `confidence` | affidabilità match                 |
+| `origin`     | parser / regola che lo ha prodotto |
 
 ## Evoluzione del reindex
 
@@ -128,13 +129,15 @@ Il reindex resta separato dal grafo, ma deve produrre più informazione struttur
 
 Il reindex dovrebbe produrre, oltre agli artefatti attuali, questi file intermedi:
 
-| File | Contenuto |
-|---|---|
-| `symbol_index_v2.json` | simboli tipizzati e gerarchici |
-| `api_client_index.json` | funzioni API frontend con verbo, route, file, parametri |
-| `backend_route_index.json` | controller/action ASP.NET con route normalizzate |
-| `entity_index.json` | DTO, model e oggetti rilevanti |
-| `file_symbol_map.json` | mapping file ↔ simboli contenuti |
+| File                       | Contenuto                                                |
+| -------------------------- | -------------------------------------------------------- |
+| `symbol_index_v2.json`     | simboli tipizzati e gerarchici                           |
+| `api_client_index.json`    | funzioni API frontend con verbo, route, file, parametri  |
+| `backend_route_index.json` | controller/action ASP.NET con route normalizzate         |
+| `entity_index.json`        | DTO, model e oggetti rilevanti                           |
+| `file_symbol_map.json`     | mapping file ↔ simboli contenuti                         |
+| `call_edges_raw_cs.json`   | raw call edges da C# (RoslynHarvester CallEdgeExtractor) |
+| `call_edges_raw_ts.json`   | raw call edges da TypeScript (ts_parser.py)              |
 
 ## Evoluzione della phase graph
 
@@ -151,13 +154,43 @@ La phase graph continua a partire dagli artefatti del reindex, ma non costruisce
 
 ### Artefatti output proposti
 
-| File | Scopo |
-|---|---|
-| `graph_file.json` | vista aggregata file-level |
-| `graph_detail.json` | grafo completo typed |
-| `graph_expansion_index.json` | mappa file → nodi/edge di dettaglio da espandere |
-| `api_links.json` | connessioni frontend ↔ endpoint ↔ backend |
-| `impact_index.json` | indice per ricerca e impact analysis |
+| File                         | Scopo                                                  |
+| ---------------------------- | ------------------------------------------------------ |
+| `graph_file.json`            | vista aggregata file-level                             |
+| `graph_detail.json`          | grafo completo typed                                   |
+| `graph_expansion_index.json` | mappa file → nodi/edge di dettaglio da espandere       |
+| `api_links.json`             | connessioni frontend ↔ endpoint ↔ backend              |
+| `impact_index.json`          | indice per ricerca e impact analysis                   |
+| `call_edges_resolved.json`   | edge `calls` risolti (Fase 1+2) da aggiungere al grafo |
+| `call_resolution_stats.json` | copertura risoluzione call edges                       |
+
+## Call Edge Resolution
+
+I collegamenti inter-procedurali tra metodi vengono estratti e risolti in tre fasi a cascata:
+
+### Fase 1 — Raw call extraction
+
+- **C#**: `RoslynHarvester` scorre ogni `MethodDeclarationSyntax`, estrae `InvocationExpressionSyntax` e produce record `RawCall` (file, classe, metodo sorgente → classe/metodo target, riga).
+- **TypeScript**: `ts_parser.py` (tree-sitter + regex) estrae `call_expression` non-API e produce record analoghi.
+
+### Fase 2 — Direct match + DI resolution
+
+- **Direct match**: `targetClassRaw` viene normalizzato (`clean_target_name`) e cercato in `name_lookup.byClassName` / `byClassNameLower`.
+- **DI resolution**: se il target inizia con `I`, si prova a rimuovere la `I` e matchare l'implementazione concreta. Se esiste un mapping esplicito interfaccia→implementazione, viene usato quello.
+
+### Fase 3 — Semantic resolution (opzionale, default OFF)
+
+- **C#**: richiede `Compilation` (es. via `MSBuildWorkspace`). `SemanticResolver` usa `SemanticModel.GetSymbolInfo(invocation)` per risolvere il metodo target reale anche attraverso interfacce e generics.
+- **TypeScript**: `tools/ts_semantic_resolver/index.js` usa `ts.createProgram` + `TypeChecker.getSymbolAtLocation` per risolvere simboli non risolvibili staticamente.
+
+L'edge finale nel grafo ha:
+
+- `source` = `fileToNodeId[fromFile]` (nodo file sorgente)
+- `target` = `toNodeId` (nodo classe/metodo destinazione)
+- `type` = `calls`
+- `confidence` = 0.9 per Fase 1/2, variabile per Fase 3
+- `origin` = `phase1` / `di_resolution` / `roslyn_semantic` / `ts_semantic`
+- `callDetail` = `{fromMethod, toMethod, line}`
 
 ## Impact analysis
 
@@ -227,22 +260,22 @@ Esempi:
 
 ### Regole di matching
 
-| Regola | Peso |
-|---|---|
-| Verbo HTTP identico | alto |
-| Segmenti statici identici | alto |
+| Regola                           | Peso  |
+| -------------------------------- | ----- |
+| Verbo HTTP identico              | alto  |
+| Segmenti statici identici        | alto  |
 | Placeholder dinamici compatibili | medio |
-| Lunghezza route compatibile | medio |
-| Match solo naming convention | basso |
+| Lunghezza route compatibile      | medio |
+| Match solo naming convention     | basso |
 
 ### Confidenza suggerita
 
-| Scenario | Confidence |
-|---|---|
-| Match esatto verbo + route normalizzata | 1.0 |
-| Match con placeholder equivalenti | 0.9 |
-| Match con wrapper o base path risolto | 0.75 |
-| Match inferito solo da naming | 0.4 |
+| Scenario                                | Confidence |
+| --------------------------------------- | ---------- |
+| Match esatto verbo + route normalizzata | 1.0        |
+| Match con placeholder equivalenti       | 0.9        |
+| Match con wrapper o base path risolto   | 0.75       |
+| Match inferito solo da naming           | 0.4        |
 
 Il matching inferito da naming non deve essere trattato come edge certo. Deve essere visibile nel viewer come relazione probabile o suggerita.
 
@@ -289,20 +322,22 @@ Questa evoluzione deve essere incrementale.
 ### Fase compatibile immediata
 
 - lasciare invariati `rebuild_index` e `phase_graph` come entrypoint;
-- aggiungere feature flag `v2_symbols`, `v2_api_matching`, `sigma_viewer`;
+- aggiungere feature flag `v2_symbols`, `v2_api_matching`, `force_graph_viewer`;
 - continuare a generare `graph.json` file-level per non rompere la UI attuale;
 - generare in parallelo i nuovi artefatti v2.
 
 ### Strategia di transizione
 
-| Fase | Obiettivo |
-|---|---|
-| 5.1 | Generare `symbol_index_v2.json` mantenendo `symbol_index.json` |
-| 5.2 | Generare `backend_route_index.json` e `api_client_index.json` |
-| 5.3 | Costruire `graph_detail.json` e derivare `graph_file.json` |
-| 5.4 | Introdurre Sigma.js con file view + expanded file view |
-| 5.5 | Abilitare full detail view |
-| 5.6 | Introdurre impact analysis avanzata e query dedicate |
+| Fase | Obiettivo                                                        |
+| ---- | ---------------------------------------------------------------- |
+| 5.1  | Generare `symbol_index_v2.json` mantenendo `symbol_index.json`   |
+| 5.2  | Generare `backend_route_index.json` e `api_client_index.json`    |
+| 5.3  | Costruire `graph_detail.json` e derivare `graph_file.json`       |
+| 5.4  | Introdurre **3D Force Graph** con file view + expanded file view |
+| 5.5  | Abilitare full detail view                                       |
+| 5.6  | Introdurre **Call Edge Resolution** (Fase 1+2) nel graph builder |
+| 5.7  | Introdurre impact analysis avanzata e query dedicate             |
+| 5.8  | Aggiungere **Fase 3 semantic resolution** (opt-in, default OFF)  |
 
 ## Piano implementativo per milestone
 
@@ -311,6 +346,7 @@ Questa evoluzione deve essere incrementale.
 Obiettivo: introdurre modello typed e parsing affidabile del backend.
 
 Deliverable:
+
 - schema JSON v2 per nodi/edge;
 - parser Roslyn per controller/action/route/classi/metodi;
 - `backend_route_index.json`;
@@ -321,6 +357,7 @@ Deliverable:
 Obiettivo: estrarre in modo strutturato il layer API TypeScript.
 
 Deliverable:
+
 - parser TS per import/export/funzioni API;
 - supporto fetch/axios/template string;
 - `api_client_index.json`;
@@ -331,6 +368,7 @@ Deliverable:
 Obiettivo: costruire gli edge API cross-layer.
 
 Deliverable:
+
 - motore di route normalization;
 - matching con score di confidenza;
 - `api_links.json`;
@@ -341,27 +379,42 @@ Deliverable:
 Obiettivo: costruire il grafo fine-grained e derivare la vista aggregata.
 
 Deliverable:
+
 - `graph_detail.json`;
 - `graph_file.json` derivato;
 - `graph_expansion_index.json`;
 - impatto base su metodo / DTO / endpoint.
 
-### Milestone 5 — Sigma viewer
+### Milestone 5 — 3D Force Graph viewer
 
 Obiettivo: sostituire progressivamente la visualizzazione attuale.
 
 Deliverable:
-- file view Sigma.js;
+
+- file view con 3D Force Graph (Three.js);
 - expanded file view con click su nodo;
 - ricerca multi-tipo;
 - pannello dettaglio nodo;
-- performance tuning su grafi reali.
+- colori edge distinti per tipo (`contains`, `imports`, `calls`, `http_calls`, ecc.).
 
-### Milestone 6 — Full detail e impact analysis avanzata
+### Milestone 6 — Call Edge Resolution
+
+Obiettivo: introdurre edge inter-procedurali tra metodi.
+
+Deliverable:
+
+- `CallEdgeExtractor` in RoslynHarvester (Fase 1 raw C#);
+- export raw calls da `ts_parser.py` (Fase 1 raw TS);
+- `phase_call_resolution.py` con Fase 1 (direct match) e Fase 2 (DI resolution);
+- integrazione in `graph_v2.py` con `_build_name_lookup`;
+- edge `calls` in `graph_detail.json` con `callDetail`.
+
+### Milestone 7 — Full detail e impact analysis avanzata
 
 Obiettivo: abilitare vista globale dettagliata e query operative.
 
 Deliverable:
+
 - full detail view con filtri;
 - upstream/downstream analysis;
 - cross-layer impact;
@@ -369,13 +422,13 @@ Deliverable:
 
 ## Rischi e mitigazioni
 
-| Rischio | Impatto | Mitigazione |
-|---|---|---|
-| Parsing C# fragile con regex | alto | usare Roslyn come fonte primaria |
-| URL frontend troppo dinamiche | medio | fallback a confidence bassa + analisi opzionale AI |
-| Full detail view troppo rumorosa | alto | filtri obbligatori e focus mode |
-| Costi complessità pipeline | medio | rollout incrementale con artefatti paralleli |
-| Rottura compatibilità viewer attuale | medio | mantenere `graph.json` legacy per transizione |
+| Rischio                              | Impatto | Mitigazione                                        |
+| ------------------------------------ | ------- | -------------------------------------------------- |
+| Parsing C# fragile con regex         | alto    | usare Roslyn come fonte primaria                   |
+| URL frontend troppo dinamiche        | medio   | fallback a confidence bassa + analisi opzionale AI |
+| Full detail view troppo rumorosa     | alto    | filtri obbligatori e focus mode                    |
+| Costi complessità pipeline           | medio   | rollout incrementale con artefatti paralleli       |
+| Rottura compatibilità viewer attuale | medio   | mantenere `graph.json` legacy per transizione      |
 
 ## Uso opzionale dell'AI
 
@@ -397,7 +450,9 @@ Gli edge prodotti dall'AI devono avere `confidence` bassa/media e visualizzazion
 5. Usare **Roslyn** per C# e parser strutturato per TypeScript.
 6. Implementare subito il matching API **type 2** in modo deterministico.
 7. Usare l'AI solo come supporto per casi non risolvibili staticamente.
-8. Migrare il viewer verso **Sigma.js** come target finale.
+8. Migrare il viewer verso **3D Force Graph** come target finale.
+9. Aggiungere **Call Edge Resolution** (Fase 1+2) nel graph builder per collegare metodi tra file.
+10. Mantenere **Fase 3 semantic resolution** opt-in e default OFF per non appesantire il reindex.
 
 ## Risultato atteso
 
@@ -407,6 +462,7 @@ A fine v5, Context Harvester deve consentire di:
 - cliccare un file e scendere ai suoi metodi, oggetti e API correlate;
 - cercare un metodo, DTO o endpoint e ottenere l'impatto reale;
 - collegare un componente frontend alla sua funzione API, all'endpoint HTTP e alla action backend che lo serve;
+- **vedere quali metodi chiamano quali altri metodi** attraverso i file (edge `calls` risolti);
 - distinguere relazioni certe da relazioni inferite.
 
 Questo porta il sistema da una mappa file-to-file utile per orientamento a una piattaforma di impact analysis realmente operativa per refactoring, debugging e change assessment cross-layer.

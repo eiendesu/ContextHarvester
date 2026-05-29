@@ -133,20 +133,16 @@ if errorlevel 1 (
   goto :pause_end
 )
 
-echo [2/7] Vendor Sigma.js ^(offline Graph View^) ...
-if not exist "%ROOT%\webview\vendor\sigma\sigma.min.js" (
-  if exist "%~dp0download-sigma.bat" (
-    call "%~dp0download-sigma.bat"
-  ) else (
-    echo [AVVISO] sigma.min.js mancante — esegui scripts\download-sigma.bat
-  )
+echo [2/7] Vendor 3d-force-graph ^(offline Graph View^) ...
+if not exist "%ROOT%\webview\vendor\force-graph\3d-force-graph.min.js" (
+  echo [AVVISO] 3d-force-graph.min.js mancante — esegui npm install e copia da node_modules
 )
-if not exist "%ROOT%\webview\vendor\sigma\sigma.min.js" (
-  echo [ERRORE] webview\vendor\sigma\sigma.min.js mancante. Esegui scripts\download-sigma.bat
+if not exist "%ROOT%\webview\vendor\force-graph\3d-force-graph.min.js" (
+  echo [ERRORE] webview\vendor\force-graph\3d-force-graph.min.js mancante.
   set "BAT_RC=1"
   goto :pause_end
 )
-echo [OK] Sigma vendor presente.
+echo [OK] 3d-force-graph vendor presente.
 
 echo [3/7] RoslynHarvester ^(.NET, per parser C# v5^) ...
 set "ROSLYN_PROJ=%ROOT%\tools\RoslynHarvester\RoslynHarvester.csproj"
@@ -214,7 +210,7 @@ if not "!VSCE_RC!"=="0" (
 
 echo [6/7] Verifica contenuto VSIX ...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$ErrorActionPreference='Stop'; Add-Type -AssemblyName System.IO.Compression.FileSystem; $z='%OUT%\%VSIX_FILE%'; if(-not(Test-Path $z)){throw 'VSIX mancante'}; $t=Join-Path $env:TEMP ('ch-vsix-check-'+[guid]::NewGuid()); New-Item -ItemType Directory -Path $t -Force|Out-Null; try { [IO.Compression.ZipFile]::ExtractToDirectory($z,$t); $must=@('extension/python/requirements.txt','extension/python/webapp/templates/index.html','extension/tools/RoslynHarvester/RoslynHarvester.csproj','extension/webview/vendor/sigma/sigma.min.js','extension/webview/vendor/sigma/graphology.umd.min.js'); foreach($m in $must){ if(-not(Test-Path (Join-Path $t $m))){ throw ('Manca nel VSIX: '+$m) } }; Write-Host '[OK] VSIX: python, webapp, Roslyn, Sigma vendor' } finally { Remove-Item $t -Recurse -Force -EA SilentlyContinue }"
+  "$ErrorActionPreference='Stop'; Add-Type -AssemblyName System.IO.Compression.FileSystem; $z='%OUT%\%VSIX_FILE%'; if(-not(Test-Path $z)){throw 'VSIX mancante'}; $t=Join-Path $env:TEMP ('ch-vsix-check-'+[guid]::NewGuid()); New-Item -ItemType Directory -Path $t -Force|Out-Null; try { [IO.Compression.ZipFile]::ExtractToDirectory($z,$t); $must=@('extension/python/requirements.txt','extension/python/webapp/templates/index.html','extension/tools/RoslynHarvester/RoslynHarvester.csproj','extension/webview/vendor/force-graph/3d-force-graph.min.js','extension/webview/vendor/force-graph/three.module.min.js'); foreach($m in $must){ if(-not(Test-Path (Join-Path $t $m))){ throw ('Manca nel VSIX: '+$m) } }; Write-Host '[OK] VSIX: python, webapp, Roslyn, 3d-force-graph vendor' } finally { Remove-Item $t -Recurse -Force -EA SilentlyContinue }"
 if errorlevel 1 (
   echo [ERRORE] Verifica VSIX fallita — pacchetto incompleto.
   set "BAT_RC=1"

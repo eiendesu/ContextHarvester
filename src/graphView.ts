@@ -144,31 +144,33 @@ export async function openGraphViewEmbedded(
     },
   );
   const webviewPath = path.join(context.extensionPath, "webview");
-  // Use Sigma.js based embedded webview
+  // Use 3D Force Graph embedded webview
   let html = fs.readFileSync(
-    path.join(webviewPath, "graph_view_sigma.html"),
+    path.join(webviewPath, "graph_view_3d.html"),
     "utf8",
   );
   const cssUri = panel.webview.asWebviewUri(
     vscode.Uri.file(path.join(webviewPath, "graph_view.css")),
   );
   const jsUri = panel.webview.asWebviewUri(
-    vscode.Uri.file(path.join(webviewPath, "graph_view_sigma.js")),
+    vscode.Uri.file(path.join(webviewPath, "graph_view_3d.js")),
   );
-  const graphologyJs = panel.webview.asWebviewUri(
+  const threeModuleUri = panel.webview.asWebviewUri(
     vscode.Uri.file(
-      path.join(webviewPath, "vendor", "sigma", "graphology.umd.min.js"),
+      path.join(webviewPath, "vendor", "force-graph", "three.module.min.js"),
     ),
   );
-  const sigmaJs = panel.webview.asWebviewUri(
-    vscode.Uri.file(path.join(webviewPath, "vendor", "sigma", "sigma.min.js")),
+  const forceGraphUri = panel.webview.asWebviewUri(
+    vscode.Uri.file(
+      path.join(webviewPath, "vendor", "force-graph", "3d-force-graph.min.js"),
+    ),
   );
   html = html
     .replace(/\{\{CSP\}\}/g, panel.webview.cspSource)
     .replace("{{CSS_URI}}", cssUri.toString())
     .replace("{{JS_URI}}", jsUri.toString())
-    .replace("{{GRAPHOLOGY_JS}}", graphologyJs.toString())
-    .replace("{{SIGMA_JS}}", sigmaJs.toString());
+    .replace("{{THREE_MODULE_URI}}", threeModuleUri.toString())
+    .replace("{{FORCE_GRAPH_URI}}", forceGraphUri.toString());
   panel.webview.html = html;
   panel.webview.postMessage({ type: "init", graph });
 }

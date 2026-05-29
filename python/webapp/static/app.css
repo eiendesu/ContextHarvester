@@ -655,6 +655,77 @@ button.primary {
   background: transparent;
 }
 
+/* ── Node list panel ──────────────────────────────────────── */
+.sigma-node-list {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.node-list-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 2px;
+}
+.node-list-item {
+  padding: 5px 8px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1.35;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.1s;
+  color: var(--txt-hi);
+  border: none;
+  background: transparent;
+  text-align: left;
+  white-space: nowrap;
+}
+.node-list-item:hover {
+  background: var(--primary-dim);
+}
+.node-list-item.active {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.node-list-item .nl-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.node-list-item .nl-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.node-list-item .nl-conn {
+  font-size: 10px;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+.node-list-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+}
+.node-list-header:hover {
+  background: var(--primary-dim);
+}
+
 /* Floating zoom */
 .sigma-zoom-btns {
   position: absolute;
@@ -1203,4 +1274,103 @@ button.primary {
 }
 .sigma-node-info-close:hover {
   color: var(--txt);
+}
+
+/* Community / Legend styles */
+.sb-community-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface-low);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--txt-mid);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  white-space: nowrap;
+}
+.legend-item:hover {
+  background: var(--primary-dim);
+  border-color: var(--primary);
+}
+.legend-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 8px;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.zone-label {
+  position: absolute;
+  background: rgba(8, 9, 15, 0.75);
+  color: #e6eef8;
+  padding: 4px 8px;
+  border-radius: 5px;
+  border-left: 3px solid #4e79a7;
+  font-weight: 600;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 10;
+}
+input[type="range"]#sigma-repulsion,
+input[type="range"]#node-label-size {
+  width: 100%;
+  margin: 4px 0;
+}
+
+/* Node size config rows */
+.node-size-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+.node-size-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+.node-size-row input {
+  width: 42px;
+  padding: 2px 4px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+.node-size-row span {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.node-size-row button {
+  padding: 1px 6px;
+  font-size: 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  margin-left: auto;
+}
+.node-size-row button:hover {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
 }

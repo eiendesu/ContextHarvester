@@ -1,0 +1,8 @@
+{
+  "name": "ts-semantic-resolver",
+  "version": "1.0.0",
+  "description": "TypeScript semantic call-edge resolver for Context Harvester",
+  "dependencies": {
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src {{CSP}} 'unsafe-inline'; script-src {{CSP}} 'unsafe-inline';"
+    />
+    <link rel="stylesheet" href="{{CSS_URI}}" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- ── Header ──────────────────────────────────────────── -->
+      <header class="app-header">
+        <div class="brand">
+          <div class="brand-icon">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="2.5" r="1.8" fill="currentColor" />
+              <circle cx="13.5" cy="12" r="1.8" fill="currentColor" />
+              <circle cx="2.5" cy="12" r="1.8" fill="currentColor" />
+              <line
+                x1="8"
+                y1="4.3"
+                x2="12.6"
+                y2="10.6"
+                stroke="currentColor"
+                stroke-width="1.1"
+                stroke-linecap="round"
+              />
+              <line
+                x1="8"
+                y1="4.3"
+                x2="3.4"
+                y2="10.6"
+                stroke="currentColor"
+                stroke-width="1.1"
+                stroke-linecap="round"
+              />
+              <line
+                x1="4.2"
+                y1="12"
+                x2="11.8"
+                y2="12"
+                stroke="currentColor"
+                stroke-width="1.1"
+                stroke-linecap="round"
+              />
+            </svg>
+          </div>
+          <div>
+            <div class="brand-title">Knowledge Graph</div>
+            <div class="brand-sub" id="graph-subtitle">Context Harvester</div>
+          </div>
+        </div>
+
+        <div class="header-stats">
+          <div class="stat-chip">
+            <span class="stat-dot" style="background: #818cf8"></span>
+            <span id="stat-nodes" class="stat-num">0</span>
+            <span class="stat-lbl">nodi</span>
+          </div>
+          <div class="stat-sep"></div>
+          <div class="stat-chip">
+            <span class="stat-dot" style="background: #475569"></span>
+            <span id="stat-edges" class="stat-num">0</span>
+            <span class="stat-lbl">archi</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- ── Bento grid ───────────────────────────────────────── -->
+      <div class="bento">
+        <!-- Sidebar -->
+        <aside class="bento-card sidebar">
+          <div class="tab-bar">
+            <button class="tab active" data-tab="cerca" type="button">
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.3"
+                stroke-linecap="round"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+              Cerca
+            </button>
+            <button class="tab" data-tab="nodo" type="button">
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.3"
+                stroke-linecap="round"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+              </svg>
+              Nodo
+            </button>
+          </div>
+
+          <!-- Pane: Cerca -->
+          <div class="tab-pane active" id="pane-cerca">
+            <div class="pane-inner">
+              <div class="field-block">
+                <div class="search-wrap">
+                  <svg
+                    class="search-ico"
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.3"
+                    stroke-linecap="round"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" />
+                  </svg>
+                  <input
+                    id="search"
+                    class="search-input"
+                    type="text"
+                    placeholder="Nodo, file, simbolo…"
+                    autocomplete="off"
+                    spellcheck="false"
+                  />
+                </div>
+              </div>
+
+              <div class="field-block">
+                <div class="block-label">Community</div>
+                <div class="select-wrap">
+                  <select id="filter-group" class="filter-select">
+                    <option value="">Tutte le community</option>
+                  </select>
+                  <svg
+                    class="select-arrow"
+                    width="10"
+                    height="6"
+                    viewBox="0 0 10 6"
+                    fill="none"
+                  >
+                    <path
+                      d="M1 1l4 4 4-4"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              <div class="cerca-hint">
+                Usa la ricerca per filtrare nodi per nome, file o simbolo.
+                Filtra per community per isolare un sottografo.
+                Naviga in 3D con trascinamento e rotella.
+              </div>
+            </div>
+          </div>
+
+          <!-- Pane: Nodo -->
+          <div class="tab-pane" id="pane-nodo">
+            <div class="pane-inner pane-nodo-inner">
+              <div class="block-label">Nodo selezionato</div>
+              <div id="node-details" class="node-card">
+                <div class="node-empty">
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.4"
+                  >
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                      d="M12 2v3M12 19v3M2 12h3M19 12h3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"
+                    />
+                  </svg>
+                  <span>Passa il mouse su un nodo</span>
+                </div>
+              </div>
+              <div class="node-actions">
+                <button
+                  id="btn-open"
+                  class="btn btn-primary"
+                  type="button"
+                  disabled
+                >
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.3"
+                    stroke-linecap="round"
+                  >
+                    <path
+                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                    />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                  Apri file
+                </button>
+                <button
+                  id="btn-seed"
+                  class="btn btn-ghost"
+                  type="button"
+                  disabled
+                >
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.3"
+                    stroke-linecap="round"
+                  >
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                    <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
+                  </svg>
+                  Seed retrieval
+                </button>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Graph canvas -->
+        <div class="bento-card graph-area">
+          <div id="graph-container"></div>
+          <div class="graph-hint">
+            Trascina per ruotare · Scroll per zoom · Hover per evidenziare · Click per aprire
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import * as THREE from '{{THREE_MODULE_URI}}';
+      window.THREE = THREE;
+      await import('{{FORCE_GRAPH_URI}}');
+    </script>
+    <script src="{{JS_URI}}"></script>
+  </body>
+</html>

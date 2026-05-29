@@ -106,7 +106,10 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Pragma", "no-cache")
         self.send_header("Expires", "0")
         self.end_headers()
-        self.wfile.write(data)
+        try:
+            self.wfile.write(data)
+        except (ConnectionAbortedError, BrokenPipeError):
+            pass  # client ha chiuso la connessione, ignoriamo silenziosamente
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -130,7 +133,10 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Pragma", "no-cache")
         self.send_header("Expires", "0")
         self.end_headers()
-        self.wfile.write(data)
+        try:
+            self.wfile.write(data)
+        except (ConnectionAbortedError, BrokenPipeError):
+            pass  # client ha chiuso la connessione, ignoriamo silenziosamente
 
     def log_message(self, fmt, *args):
         # stampa richieste in modo leggibile

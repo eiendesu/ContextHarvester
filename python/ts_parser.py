@@ -144,6 +144,21 @@ def _parse_tree_sitter(rel: str, text: str, result: TsFileAnalysis) -> TsFileAna
     return result
 
 
+def extract_and_export_calls(file_path: str, result: TsFileAnalysis) -> list[dict[str, Any]]:
+    """Export raw call edges from a parsed TypeScript file."""
+    raw_calls: list[dict[str, Any]] = []
+    for call in result.calls:
+        raw_calls.append({
+            "fromFile": file_path,
+            "fromClass": result.default_export or "",
+            "fromMethod": call.get("name", ""),
+            "targetClassRaw": "",
+            "targetMethod": call.get("name", ""),
+            "line": call.get("line", 0),
+        })
+    return raw_calls
+
+
 def _parse_regex(rel: str, text: str, result: TsFileAnalysis) -> TsFileAnalysis:
     for m in _EXPORT_FN_RE.finditer(text):
         result.exports.append(

@@ -103,7 +103,7 @@
       },
       {
         "command": "context-harvester.openKnowledgeGraph",
-        "title": "Context Harvester: Apri Knowledge Graph (Sigma)",
+        "title": "Context Harvester: Apri Knowledge Graph (3D)",
         "category": "Context Harvester"
       }
     ],
@@ -412,7 +412,7 @@
         "contextHarvester.sigmaViewer": {
           "type": "boolean",
           "default": true,
-          "description": "v5 — tab Sigma.js nella Graph View (file view + expanded file)."
+          "description": "v5 — tab 3D Force Graph nella Graph View (file view + expanded file)."
         },
         "contextHarvester.useRoslyn": {
           "type": "boolean",
@@ -460,6 +460,41 @@
             "fetch",
             "axios"
           ]
+        },
+        "contextHarvester.callEdges.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Master switch — se false, nessun edge calls viene generato."
+        },
+        "contextHarvester.callEdges.enableLevelA": {
+          "type": "boolean",
+          "default": true,
+          "description": "Fase 1 — match diretto su name_lookup (sempre veloce)."
+        },
+        "contextHarvester.callEdges.enableDIResolution": {
+          "type": "boolean",
+          "default": true,
+          "description": "Fase 2 — risoluzione interfacce -> implementazioni."
+        },
+        "contextHarvester.callEdges.enableSemanticResolution": {
+          "type": "boolean",
+          "default": false,
+          "description": "Fase 3 — Roslyn SemanticModel + TypeScript compiler API (default OFF)."
+        },
+        "contextHarvester.callEdges.enableTypeScriptSemantic": {
+          "type": "boolean",
+          "default": true,
+          "description": "Fase 3 TypeScript — richiede Node.js installato."
+        },
+        "contextHarvester.callEdges.semanticTimeoutSeconds": {
+          "type": "number",
+          "default": 120,
+          "description": "Timeout per la Fase 3 — se supera, usa solo Fase 1+2."
+        },
+        "contextHarvester.callEdges.maxCallsPerFile": {
+          "type": "number",
+          "default": 500,
+          "description": "Limite per file molto grandi — evita esplosione su file generati."
         },
         "contextHarvester.enableGraphView": {
           "type": "boolean",
@@ -509,5 +544,10 @@
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.96.0",
     "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "@types/three": "^0.184.1",
+    "3d-force-graph": "^1.80.0",
+    "three": "^0.184.0"
   }
 }

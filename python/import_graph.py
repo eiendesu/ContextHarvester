@@ -145,6 +145,22 @@ def build_import_graph(config: dict[str, Any]) -> dict[str, Any]:
                 }
             )
 
+    # Export raw call edges for call-edge resolution pipeline
+    raw_ts_calls: list[dict[str, Any]] = []
+    for rel, analysis in analyses.items():
+        for call in analysis.calls:
+            raw_ts_calls.append({
+                "fromFile": rel,
+                "fromClass": analysis.default_export or "",
+                "fromMethod": call.get("name", ""),
+                "targetClassRaw": "",
+                "targetMethod": call.get("name", ""),
+                "line": call.get("line", 0),
+            })
+    (harv / "call_edges_raw_ts.json").write_text(
+        json.dumps({"calls": raw_ts_calls}, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
     index = {
         "version": "5.0",
         "edges": edges,

@@ -15,7 +15,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/vendor/vis-network/vis-network.min.css" />
-    <link rel="stylesheet" href="/static/app.css?v=5" />
+    <link rel="stylesheet" href="/static/app.css?v=6" />
   </head>
   <body>
     <!-- ═══ HEADER ═══ -->
@@ -498,12 +498,19 @@
             </div>
           </div>
 
-          <!-- Visualizzazione -->
+          <!-- Filtri -->
           <div class="sb-section">
             <div class="sb-section-title">
-              <span class="sb-section-ico">◎</span> VISUALIZZAZIONE
+              <span class="sb-section-ico">◎</span> FILTRI
             </div>
-            <div class="sb-pill-row">
+            <label class="sb-field-label">Colora nodi per</label>
+            <select id="sigma-color-by" class="sb-input">
+              <option value="type" selected>Tipo nodo</option>
+              <option value="community">Community</option>
+              <option value="project">Progetto</option>
+              <option value="folder">Cartella</option>
+            </select>
+            <div class="sb-pill-row" style="margin-top: 6px">
               <label
                 class="sb-pill"
                 title="Mostra o nasconde le etichette testuali dei nodi sul grafo"
@@ -519,22 +526,97 @@
                 <span>Archi</span>
               </label>
             </div>
-            <div class="sb-pill-row">
-              <label
-                class="sb-pill"
-                title="Attiva il layout a zone per progetto/cartella (disattiva per layout circolare semplice)"
-              >
-                <input type="checkbox" id="sigma-zone-view" checked />
-                <span>Vista a zone</span>
+            <label class="sb-field-label" style="margin-top: 8px"
+              >Vista a zone</label
+            >
+            <div class="sb-pill-row" style="margin-top: 6px">
+              <label class="sb-pill">
+                <input
+                  type="radio"
+                  name="zone-mode"
+                  value="off"
+                  id="zone-off"
+                />
+                <span>Off (libera)</span>
+              </label>
+              <label class="sb-pill">
+                <input
+                  type="radio"
+                  name="zone-mode"
+                  value="project_folder"
+                  id="zone-project-folder"
+                />
+                <span>Progetto / Cartella</span>
+              </label>
+              <label class="sb-pill">
+                <input
+                  type="radio"
+                  name="zone-mode"
+                  value="community"
+                  id="zone-community"
+                  checked
+                />
+                <span>Community</span>
               </label>
             </div>
+
+            <label class="sb-field-label" style="margin-top: 8px"
+              >Modalità dettaglio</label
+            >
+            <div class="sb-pill-row" style="margin-top: 6px">
+              <label class="sb-pill">
+                <input
+                  type="radio"
+                  name="detail-mode"
+                  value="file"
+                  id="detail-file"
+                  checked
+                />
+                <span>Solo file</span>
+              </label>
+              <label class="sb-pill">
+                <input
+                  type="radio"
+                  name="detail-mode"
+                  value="full"
+                  id="detail-full"
+                />
+                <span>Dettagli (file + internals)</span>
+              </label>
+            </div>
+
             <label
               class="sb-check-inline"
+              style="margin-top: 8px"
+              title="Se attivo, mostra solo i nodi padre (file); i figli interni appaiono solo con doppio click"
+            >
+              <input type="checkbox" id="sigma-collapsed" checked />
+              <span>Vista collassata</span>
+            </label>
+
+            <label
+              class="sb-check-inline"
+              style="margin-top: 4px"
               title="Se attivo, nasconde i metodi privati (visibility=private) dal grafo"
             >
               <input type="checkbox" id="sigma-hide-private" checked />
               <span>Nascondi private</span>
             </label>
+            <label
+              class="sb-field-label"
+              style="margin-top: 8px"
+              title="Forza di repulsione tra i nodi (più alto = più distanza)"
+              >Repulsione</label
+            >
+            <input
+              type="range"
+              id="sigma-repulsion"
+              min="200"
+              max="1200"
+              value="400"
+              class="sb-input"
+            />
+            <input type="hidden" id="sigma-filter-group" value="" />
             <div class="sb-grid-2">
               <div class="sb-field">
                 <label
@@ -606,6 +688,75 @@
               <input type="checkbox" id="sigma-cross-layer" />
               <span>Cross-layer impact</span>
             </label>
+          </div>
+
+          <!-- Impostazioni -->
+          <div class="sb-section">
+            <div class="sb-section-title">
+              <span class="sb-section-ico">⚙️</span> IMPOSTAZIONI
+            </div>
+            <label class="sb-field-label" style="margin-top: 4px"
+              >Dimensione nodi</label
+            >
+            <div id="node-size-config" class="node-size-list"></div>
+            <button
+              type="button"
+              id="node-size-add"
+              class="sb-btn sb-btn-ghost sb-btn-full"
+              style="margin-top: 4px; font-size: 11px"
+            >
+              + Aggiungi range
+            </button>
+            <label class="sb-field-label" style="margin-top: 8px"
+              >Dimensione numeri</label
+            >
+            <input
+              type="range"
+              id="node-label-size"
+              min="0.5"
+              max="3.0"
+              step="0.1"
+              value="1.0"
+              class="sb-input"
+            />
+            <label class="sb-field-label" style="margin-top: 8px"
+              >Distribuzione</label
+            >
+            <select id="sigma-layout-style" class="sb-input">
+              <option value="cloud" selected>Cloud / Sfera</option>
+              <option value="cluster">Clustered</option>
+              <option value="radial">Radiale</option>
+              <option value="hierarchical">Gerarchico</option>
+              <option value="tree">Tree-like</option>
+            </select>
+            <button
+              type="button"
+              id="settings-save"
+              class="sb-btn sb-btn-primary sb-btn-full"
+              style="margin-top: 10px; font-size: 12px"
+            >
+              💾 Salva impostazioni
+            </button>
+          </div>
+
+          <!-- Community Legend -->
+          <div class="sb-section">
+            <div class="sb-section-title">
+              <span class="sb-section-ico">🎨</span> COMMUNITY
+            </div>
+            <div id="sigma-community-legend" class="sb-community-list"></div>
+            <button
+              type="button"
+              id="sigma-clear-group"
+              class="sb-btn sb-btn-ghost sb-btn-full"
+              style="margin-top: 6px; font-size: 11px"
+              onclick="
+                document.getElementById('sigma-filter-group').value = '';
+                window.chSigmaView?.renderFileView?.();
+              "
+            >
+              Mostra tutte
+            </button>
           </div>
 
           <!-- Funzionalità -->
@@ -751,46 +902,62 @@
             class="sigma-impact-preview muted small"
           ></div>
         </div>
+
+        <!-- Node list panel -->
+        <aside class="sigma-node-list" id="sigma-node-list-panel">
+          <div class="sb-section" style="height: 100%; gap: 6px">
+            <div class="sb-section-title">
+              <span class="sb-section-ico">☰</span> NODI
+            </div>
+            <input
+              type="text"
+              id="sigma-node-list-search"
+              class="sb-input"
+              placeholder="Cerca nodo…"
+              style="font-size: 12px"
+            />
+            <div
+              id="sigma-node-list-count"
+              class="muted small"
+              style="font-size: 10px"
+            ></div>
+            <button
+              id="sigma-node-list-reset"
+              class="btn btn-sm"
+              style="display: none; font-size: 11px; padding: 3px 8px"
+              onclick="chSigmaView.restoreFullGraph()"
+            >
+              ✕ Mostra tutto
+            </button>
+            <div id="sigma-node-list" class="node-list-scroll"></div>
+          </div>
+        </aside>
       </section>
     </main>
 
     <script src="/vendor/vis-network/vis-network.min.js"></script>
-    <script src="/vendor/sigma/graphology.umd.min.js"></script>
-    <script src="/vendor/sigma/sigma.min.js"></script>
+    <script type="module" src="/static/load-3d-graph.js"></script>
     <script src="/static/progress.js"></script>
     <script src="/static/app.js"></script>
     <script src="/static/symbols-view.js"></script>
-    <script src="/static/sigma-view.js?v=28"></script>
+    <script src="/static/force-graph-view.js?v=35"></script>
     <script>
-      /* Sync zoom buttons → sigma camera */
+      /* Sync zoom buttons → 3D camera */
       (function () {
-        function getSigma() {
-          return window.chSigmaView?.getSigma?.();
-        }
         document
           .getElementById("sigma-zoom-in")
           ?.addEventListener("click", () => {
-            const s = getSigma();
-            if (s) {
-              const c = s.getCamera();
-              c.animatedZoom({ factor: 1.5 });
-            }
+            document.getElementById("sigma-fit")?.click();
           });
         document
           .getElementById("sigma-zoom-out")
           ?.addEventListener("click", () => {
-            const s = getSigma();
-            if (s) {
-              const c = s.getCamera();
-              c.animatedUnzoom({ factor: 1.5 });
-            }
+            document.getElementById("sigma-fit")?.click();
           });
         document
           .getElementById("sigma-zoom-fit")
           ?.addEventListener("click", () => {
-            const s = getSigma();
-            if (s) s.getCamera().animatedReset({ duration: 300 });
-            else document.getElementById("sigma-fit")?.click();
+            document.getElementById("sigma-fit")?.click();
           });
         /* Mirror status-line in sidebar */
         const obs = new MutationObserver(() => {

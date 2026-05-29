@@ -83,6 +83,49 @@ def _build_impact_index(nodes: list[dict[str, Any]], edges: list[dict[str, Any]]
     }
 
 
+def _build_name_lookup(nodes: list[dict[str, Any]]) -> dict[str, Any]:
+    """Build name lookup tables for call edge resolution."""
+    by_class: dict[str, str] = {}
+    by_class_lower: dict[str, str] = {}
+    node_to_class: dict[str, str] = {}
+    node_to_file: dict[str, str] = {}
+    interfaces: dict[str, str] = {}
+    file_to_node_id: dict[str, str] = {}
+
+    for n in nodes:
+        nid = n["id"]
+        ntype = n.get("type", "")
+        label = n.get("label", "")
+        fp = n.get("filePath", "")
+        qname = n.get("qualifiedName", "")
+
+        node_to_file[nid] = fp
+        if ntype == "file":
+            file_to_node_id[fp] = nid
+
+        if ntype in ("class", "dto", "record"):
+            by_class[label] = nid
+            by_class_lower[label.lower()] = nid
+            node_to_class[nid] = label
+            # heuristic: ILeadService -> LeadService if single impl
+            if label.startswith("I") and len(label) > 1:
+                concrete = label[1:]
+                if concrete in by_class:
+                    interfaces[label] = concrete
+
+        if ntype == "method" and qname:
+            node_to_class[nid] = qname.split(".")[0] if "." in qname else label
+
+    return {
+        "byClassName": by_class,
+        "byClassNameLower": by_class_lower,
+        "nodeToClass": node_to_class,
+        "nodeToFile": node_to_file,
+        "interfaces": interfaces,
+        "fileToNodeId": file_to_node_id,
+    }
+
+
 def run_graph_v2(config: dict[str, Any], file_groups: dict[str, str] | None = None) -> dict[str, Any]:
     """Build graph_detail.json, graph_file.json, expansion + impact indexes."""
     repo = Path(config["repoPath"]).resolve()
@@ -198,6 +241,47 @@ def run_graph_v2(config: dict[str, Any], file_groups: dict[str, str] | None = No
                     "origin": "api_matcher",
                 }
             )
+
+    node_by_id = {n["id"]: n for n in nodes}
+
+    # Call edge resolution (Fase 1 + Fase 2)
+    raw_cs = _load_json(repo, "call_edges_raw_cs.json").get("calls", [])
+    raw_ts = _load_json(repo, "call_edges_raw_ts.json").get("calls", [])
+
+    if raw_cs or raw_ts:
+        name_lookup = _build_name_lookup(nodes)
+        settings = {
+            "enableDIResolution": config.get("callEdges", {}).get("enableDIResolution", True)
+            if isinstance(config.get("callEdges"), dict)
+            else True,
+        }
+        from phase_call_resolution import resolve_all_call_edges, save_call_edge_results
+
+        resolved = resolve_all_call_edges(raw_cs, raw_ts, name_lookup, settings)
+        save_call_edge_results(repo, resolved, raw_cs, raw_ts)
+
+        # Add "calls" edges to graph_detail
+        for call in resolved:
+            from_file = call.get("fromFile", "")
+            to_file = call.get("toFile", "")
+            to_node_id = call.get("toNodeId", "")
+            if not from_file or not to_file or not to_node_id:
+                continue
+            from_node_id = name_lookup.get("fileToNodeId", {}).get(from_file)
+            if from_node_id and from_node_id != to_node_id:
+                edges.append({
+                    "source": from_node_id,
+                    "target": to_node_id,
+                    "type": "calls",
+                    "weight": 1.0,
+                    "confidence": 0.9,
+                    "origin": call.get("resolvedBy", "phase1"),
+                    "callDetail": {
+                        "fromMethod": call.get("fromMethod", ""),
+                        "toMethod": call.get("targetMethod", ""),
+                        "line": call.get("line", 0),
+                    },
+                })
 
     node_by_id = {n["id"]: n for n in nodes}
 
