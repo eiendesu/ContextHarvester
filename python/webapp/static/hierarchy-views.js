@@ -470,6 +470,7 @@
   /* ---------- Circle Pack ---------- */
   let circlePackObs = null;
   let circlePackFocusNode = null; // D3 hierarchy node (not .data)
+  let circlePackZoomScale = 1;
 
   function renderCirclePack() {
     const container = $("circlepack-container");
@@ -516,14 +517,17 @@
       .style("font", "10px Inter, system-ui, sans-serif");
 
     const g = svg.append("g");
+    g.attr("transform", `scale(${circlePackZoomScale})`);
 
-    // Zoom wheel semplice (senza overlay D3 che blocca click)
-    let cpScale = 1;
+    // Zoom wheel manuale (senza overlay D3 che blocca click)
     svg.on("wheel", (event) => {
       event.preventDefault();
       const factor = event.deltaY > 0 ? 0.9 : 1.1;
-      cpScale = Math.max(0.5, Math.min(8, cpScale * factor));
-      g.attr("transform", `scale(${cpScale})`);
+      circlePackZoomScale = Math.max(
+        0.5,
+        Math.min(8, circlePackZoomScale * factor),
+      );
+      g.attr("transform", `scale(${circlePackZoomScale})`);
     });
 
     const root = d3
@@ -548,6 +552,7 @@
       .join("g")
       .attr("transform", (d) => `translate(${d.x - w / 2},${d.y - h / 2})`);
 
+    // Cerchi senza eventi pointer — click e tooltip gestiti a livello SVG
     node
       .append("circle")
       .attr("r", (d) => d.r)
@@ -556,47 +561,7 @@
       )
       .attr("stroke", (d) => (d.depth === 0 ? "none" : "var(--border)"))
       .attr("stroke-width", (d) => (d.depth === 0 ? 0 : 1))
-      .style("cursor", (d) => {
-        if (d === root && circlePackFocusNode) return "pointer";
-        return d.children ? "pointer" : "default";
-      })
-      .style("pointer-events", "all")
-      .on("click", (event, d) => {
-        event.stopPropagation();
-        console.log(
-          "[CirclePack] click",
-          d.data.name,
-          "depth:",
-          d.depth,
-          "hasChildren:",
-          !!d.children,
-          "isRoot:",
-          d === root,
-        );
-        if (d === root && circlePackFocusNode) {
-          console.log("[CirclePack] → going up");
-          circlePackFocusNode = circlePackFocusNode.parent || null;
-          renderCirclePack();
-        } else if (d.children && d !== root) {
-          console.log("[CirclePack] → zoom in");
-          circlePackFocusNode = d;
-          renderCirclePack();
-        } else {
-          console.log("[CirclePack] → leaf or root, no action");
-        }
-      })
-      .on("mouseenter", (event, d) => {
-        tooltipDiv.textContent = `${d.data.name} — ${d.children ? d.children.length + " figli" : "foglia"}`;
-        tooltipDiv.style.visibility = "visible";
-      })
-      .on("mousemove", (event) => {
-        const rect = container.getBoundingClientRect();
-        tooltipDiv.style.left = event.clientX - rect.left + 10 + "px";
-        tooltipDiv.style.top = event.clientY - rect.top - 24 + "px";
-      })
-      .on("mouseleave", () => {
-        tooltipDiv.style.visibility = "hidden";
-      });
+      .style("pointer-events", "none");
 
     node
       .filter((d) => d.r > 14 && d.depth < 3)
@@ -613,6 +578,69 @@
       .style("font-size", (d) => Math.min(11, d.r / 2.5) + "px")
       .style("fill", (d) => (d.children ? "#94a3b8" : "#e2e8f0"))
       .style("pointer-events", "none");
+
+    // Helper: trova il nodo pack sotto il punto (x,y) nelle coordinate SVG
+    function nodeAtPoint(px, py) {
+      const svgX = px / circlePackZoomScale;
+      const svgY = py / circlePackZoomScale;
+      const candidates = root.descendants().filter((d) => {
+        const nx = d.x - w / 2;
+        const ny = d.y - h / 2;
+        return Math.hypot(svgX - nx, svgY - ny) <= d.r;
+      });
+      candidates.sort((a, b) => a.r - b.r); // più piccolo = più sopra
+      return candidates[0] || null;
+    }
+
+    // Click a livello SVG — passa attraverso i cerchi con pointer-events:none
+    svg.on("click", (event) => {
+      event.stopPropagation();
+      const [px, py] = d3.pointer(event);
+      const d = nodeAtPoint(px, py);
+      if (!d) return;
+      console.log(
+        "[CirclePack] click",
+        d.data.name,
+        "depth:",
+        d.depth,
+        "hasChildren:",
+        !!d.children,
+        "isRoot:",
+        d === root,
+      );
+      if (d === root && circlePackFocusNode) {
+        console.log("[CirclePack] → going up");
+        circlePackZoomScale = 1;
+        circlePackFocusNode = circlePackFocusNode.parent || null;
+        renderCirclePack();
+      } else if (d.children && d !== root) {
+        console.log("[CirclePack] → zoom in");
+        circlePackZoomScale = 1;
+        circlePackFocusNode = d;
+        renderCirclePack();
+      } else {
+        console.log("[CirclePack] → leaf or root, no action");
+      }
+    });
+
+    // Tooltip a livello SVG
+    svg.on("mousemove", (event) => {
+      const [px, py] = d3.pointer(event);
+      const d = nodeAtPoint(px, py);
+      if (d) {
+        tooltipDiv.textContent = `${d.data.name} — ${d.children ? d.children.length + " figli" : "foglia"}`;
+        tooltipDiv.style.visibility = "visible";
+        const rect = container.getBoundingClientRect();
+        tooltipDiv.style.left = event.clientX - rect.left + 10 + "px";
+        tooltipDiv.style.top = event.clientY - rect.top - 24 + "px";
+      } else {
+        tooltipDiv.style.visibility = "hidden";
+      }
+    });
+
+    svg.on("mouseleave", () => {
+      tooltipDiv.style.visibility = "hidden";
+    });
 
     if (circlePackObs) circlePackObs.disconnect();
     circlePackObs = new ResizeObserver(() => {
