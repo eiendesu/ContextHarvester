@@ -534,11 +534,45 @@
     const pack = d3.pack().size([w, h]).padding(3);
     pack(root);
 
+    // Tooltip HTML custom
+    let tooltipDiv = container.querySelector(".cp-tooltip");
+    if (!tooltipDiv) {
+      tooltipDiv = document.createElement("div");
+      tooltipDiv.className = "cp-tooltip";
+      container.appendChild(tooltipDiv);
+    }
+
     const node = g
       .selectAll("g")
       .data(root.descendants())
       .join("g")
-      .attr("transform", (d) => `translate(${d.x - w / 2},${d.y - h / 2})`);
+      .attr("transform", (d) => `translate(${d.x - w / 2},${d.y - h / 2})`)
+      .style("cursor", (d) => {
+        if (d === root && circlePackFocusNode) return "pointer";
+        return d.children ? "pointer" : "default";
+      })
+      .on("click", (event, d) => {
+        event.stopPropagation();
+        if (d === root && circlePackFocusNode) {
+          circlePackFocusNode = circlePackFocusNode.parent || null;
+          renderCirclePack();
+        } else if (d.children) {
+          circlePackFocusNode = d;
+          renderCirclePack();
+        }
+      })
+      .on("mouseover", (event, d) => {
+        tooltipDiv.textContent = `${d.data.name} — ${d.children ? d.children.length + " figli" : "foglia"}`;
+        tooltipDiv.style.visibility = "visible";
+      })
+      .on("mousemove", (event) => {
+        const rect = container.getBoundingClientRect();
+        tooltipDiv.style.left = event.clientX - rect.left + 10 + "px";
+        tooltipDiv.style.top = event.clientY - rect.top - 24 + "px";
+      })
+      .on("mouseout", () => {
+        tooltipDiv.style.visibility = "hidden";
+      });
 
     node
       .append("circle")
@@ -547,29 +581,7 @@
         d.children ? "rgba(15, 23, 42, 0.6)" : d.data.color || "var(--primary)",
       )
       .attr("stroke", (d) => (d.depth === 0 ? "none" : "var(--border)"))
-      .attr("stroke-width", (d) => (d.depth === 0 ? 0 : 1))
-      .style("cursor", (d) => {
-        if (d === root && circlePackFocusNode) return "pointer";
-        return d.children ? "pointer" : "default";
-      })
-      .style("pointer-events", "all")
-      .on("click", (event, d) => {
-        event.stopPropagation();
-        if (d === root && circlePackFocusNode) {
-          // Click on current root → go up
-          circlePackFocusNode = circlePackFocusNode.parent || null;
-          renderCirclePack();
-        } else if (d.children) {
-          // Click on node with children → zoom in
-          circlePackFocusNode = d;
-          renderCirclePack();
-        }
-      })
-      .append("title")
-      .text(
-        (d) =>
-          `${d.data.name}\n${d.children ? d.children.length + " figli" : "foglia"}`,
-      );
+      .attr("stroke-width", (d) => (d.depth === 0 ? 0 : 1));
 
     node
       .filter((d) => d.r > 14 && d.depth < 3)

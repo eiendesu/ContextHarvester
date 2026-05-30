@@ -1443,6 +1443,20 @@ input[type="range"]#node-label-size {
   font-weight: 500;
 }
 
+.cp-tooltip {
+  position: absolute;
+  background: rgba(15, 23, 42, 0.92);
+  color: #e2e8f0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  pointer-events: none;
+  z-index: 20;
+  visibility: hidden;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
 #sunburst-container .sunburst-viz {
   font-family: var(--font);
 }
