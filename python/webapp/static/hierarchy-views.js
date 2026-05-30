@@ -538,7 +538,21 @@
       .selectAll("g")
       .data(root.descendants())
       .join("g")
-      .attr("transform", (d) => `translate(${d.x - w / 2},${d.y - h / 2})`)
+      .attr("transform", (d) => `translate(${d.x - w / 2},${d.y - h / 2})`);
+
+    node
+      .append("circle")
+      .attr("r", (d) => d.r)
+      .attr("fill", (d) =>
+        d.children ? "rgba(15, 23, 42, 0.6)" : d.data.color || "var(--primary)",
+      )
+      .attr("stroke", (d) => (d.depth === 0 ? "none" : "var(--border)"))
+      .attr("stroke-width", (d) => (d.depth === 0 ? 0 : 1))
+      .style("cursor", (d) => {
+        if (d === root && circlePackFocusNode) return "pointer";
+        return d.children ? "pointer" : "default";
+      })
+      .style("pointer-events", "all")
       .on("click", (event, d) => {
         event.stopPropagation();
         if (d === root && circlePackFocusNode) {
@@ -550,16 +564,7 @@
           circlePackFocusNode = d;
           renderCirclePack();
         }
-      });
-
-    node
-      .append("circle")
-      .attr("r", (d) => d.r)
-      .attr("fill", (d) =>
-        d.children ? "rgba(15, 23, 42, 0.6)" : d.data.color || "var(--primary)",
-      )
-      .attr("stroke", (d) => (d.depth === 0 ? "none" : "var(--border)"))
-      .attr("stroke-width", (d) => (d.depth === 0 ? 0 : 1))
+      })
       .append("title")
       .text(
         (d) =>
