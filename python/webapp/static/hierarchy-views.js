@@ -469,39 +469,54 @@
     const nodes = [];
     const links = [];
     const seen = new Set();
-    let nodeIdx = 0;
-    const nameToIdx = new Map();
 
-    function addNode(name, depth) {
-      const key = name + "|" + depth;
-      if (seen.has(key)) return nameToIdx.get(key);
-      seen.add(key);
-      nameToIdx.set(key, nodeIdx);
+    function addNode(fullName, depth) {
+      if (seen.has(fullName)) return;
+      seen.add(fullName);
       nodes.push({
-        name,
+        name: fullName,
         depth,
         itemStyle: { color: getColorForDepth(depth) },
       });
-      return nodeIdx++;
     }
 
-    function walk(d, depth) {
-      const srcIdx = addNode(d.name, depth);
+    function walk(d, depth, path) {
+      const fullName = path ? path + " > " + d.name : d.name;
+      addNode(fullName, depth);
       if (d.children) {
         d.children.forEach((c) => {
-          const tgtIdx = addNode(c.name, depth + 1);
-          links.push({ source: srcIdx, target: tgtIdx, value: c.value || 1 });
-          walk(c, depth + 1);
+          const childFullName = fullName + " > " + c.name;
+          addNode(childFullName, depth + 1);
+          links.push({
+            source: fullName,
+            target: childFullName,
+            value: c.value || 1,
+          });
+          walk(c, depth + 1, fullName);
         });
       }
     }
-    walk(data, 0);
+    walk(data, 0, "");
 
+    if (sankeyChart) {
+      sankeyChart.dispose();
+      sankeyChart = null;
+    }
     container.innerHTML = "";
     sankeyChart = echarts.init(container, "dark");
     sankeyChart.setOption({
       backgroundColor: "transparent",
-      tooltip: { trigger: "item", triggerOn: "mousemove" },
+      tooltip: {
+        trigger: "item",
+        triggerOn: "mousemove",
+        formatter: (params) => {
+          if (params.dataType === "node") {
+            const parts = params.name.split(" > ");
+            return `<strong>${parts[parts.length - 1]}</strong>`;
+          }
+          return `${params.data.source.split(" > ").pop()} → ${params.data.target.split(" > ").pop()}`;
+        },
+      },
       series: [
         {
           type: "sankey",
@@ -514,6 +529,10 @@
             color: "#e2e8f0",
             fontSize: 10,
             fontFamily: "Inter, system-ui, sans-serif",
+            formatter: (params) => {
+              const parts = params.name.split(" > ");
+              return parts[parts.length - 1];
+            },
           },
           itemStyle: { borderWidth: 0 },
           layoutIterations: 64,
