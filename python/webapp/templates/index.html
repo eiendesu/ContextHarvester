@@ -15,7 +15,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/vendor/vis-network/vis-network.min.css" />
-    <link rel="stylesheet" href="/static/app.css?v=6" />
+    <link rel="stylesheet" href="/static/app.css?v=9" />
   </head>
   <body>
     <!-- ═══ HEADER ═══ -->
@@ -1023,6 +1023,19 @@
                 Community → Project → Folder → File → Details
               </option>
             </select>
+            <label class="sb-field-label" style="margin-top: 8px">Layout</label>
+            <select id="tree-layout" class="sb-input">
+              <option value="radial">Radiale</option>
+              <option value="linear">Lineare</option>
+              <option value="unrooted">Unrooted</option>
+            </select>
+            <label class="sb-field-label" style="margin-top: 8px"
+              >Stile etichette</label
+            >
+            <select id="tree-label-style" class="sb-input">
+              <option value="compact">Compatto</option>
+              <option value="tip-aligned">Tip-aligned</option>
+            </select>
             <div class="sb-btn-row" style="margin-top: 6px">
               <button
                 type="button"
@@ -1050,8 +1063,8 @@
           </div>
           <div class="sb-section">
             <p class="muted small" style="margin: 0">
-              Albero radiale navigabile. Clicca sui nodi per
-              espandere/collassare i rami. Usa lo scroll per zoomare.
+              Albero navigabile. Clicca sui nodi per espandere/collassare i
+              rami. Cambia layout dal menu sopra.
             </p>
           </div>
         </aside>
@@ -1066,7 +1079,7 @@
     <script src="/static/progress.js"></script>
     <script src="/static/vendor/d3.v7.min.js?v=2"></script>
     <script src="/static/vendor/sunburst-chart.min.js?v=2"></script>
-    <script src="/static/hierarchy-views.js?v=18"></script>
+    <script src="/static/hierarchy-views.js?v=29"></script>
     <script src="/static/app.js"></script>
     <script src="/static/symbols-view.js"></script>
     <script src="/static/force-graph-view.js?v=35"></script>

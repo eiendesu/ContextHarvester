@@ -324,59 +324,32 @@
       .call(sunburstZoom.scaleBy, factor);
   }
 
-  /* ---------- Radial Tree ---------- */
-  let treeRoot = null;
-  let treeSvg = null;
-  let treeG = null;
-  let treeRadius = 0;
+  /* ---------- Radial Tree (multi) ---------- */
+  const MINI_TREE_SIZE = 280;
+  let miniTreeRegistry = [];
 
-  function setupTreeSvg(totalLeaves) {
-    const container = $("tree-container");
-    if (!container) return;
-    const width = container.clientWidth || 800;
-    const height = container.clientHeight || 600;
-    // Ensure enough radius so leaves don't overlap (approx 16px arc each)
-    const minRadius = Math.min(width, height) / 2;
-    const desiredRadius = ((totalLeaves || 100) * 16) / (2 * Math.PI);
-    treeRadius = Math.max(minRadius, Math.min(desiredRadius, 3000));
-    container.innerHTML = "";
-    treeSvg = d3
-      .select(container)
-      .append("svg")
-      .attr("width", width)
-      .attr("height", height)
-      .attr("viewBox", [
-        -treeRadius,
-        -treeRadius,
-        treeRadius * 2,
-        treeRadius * 2,
-      ])
-      .style("font", "11px Inter, system-ui, sans-serif");
-    treeG = treeSvg.append("g");
-    treeSvg.call(
-      d3
-        .zoom()
-        .scaleExtent([0.05, 4])
-        .on("zoom", (e) => {
-          treeG.attr("transform", e.transform);
-        }),
-    );
-  }
-
-  function drawTree() {
-    if (!treeRoot || !treeG) return;
-    const treeLayout = d3.tree().size([2 * Math.PI, treeRadius]);
-    treeLayout(treeRoot);
-
-    const nodes = treeRoot.descendants();
-    const links = treeRoot.links();
-
+  function drawRadialTree(
+    svgG,
+    root,
+    w,
+    h,
+    interactive,
+    labelStyle = "compact",
+  ) {
+    const radius = Math.min(w, h) / 2 - 20;
+    const treeLayout = d3.tree().size([2 * Math.PI, radius]);
+    treeLayout(root);
+    const nodes = root.descendants();
+    const links = root.links();
     const linkGen = d3
       .linkRadial()
       .angle((d) => d.x)
       .radius((d) => d.y);
+    const maxR = d3.max(nodes, (d) => d.y);
+    const tipR = maxR + 40;
+    const isLeaf = (d) => !d.children && !d._children;
 
-    treeG
+    svgG
       .selectAll("path.tree-link")
       .data(links, (d) => d.target.id)
       .join(
@@ -393,7 +366,7 @@
         (exit) => exit.remove(),
       );
 
-    treeG
+    const nodeJoin = svgG
       .selectAll("g.tree-node")
       .data(nodes, (d) => d.id)
       .join(
@@ -406,30 +379,64 @@
               (d) =>
                 `rotate(${(d.x * 180) / Math.PI - 90}) translate(${d.y},0)`,
             )
-            .on("click", (event, d) => {
-              if (d.children) {
-                d._children = d.children;
-                d.children = null;
-              } else if (d._children) {
-                d.children = d._children;
-                d._children = null;
-              }
-              drawTree();
-            });
+            .on(
+              "click",
+              interactive
+                ? (event, d) => {
+                    if (d.children) {
+                      d._children = d.children;
+                      d.children = null;
+                    } else if (d._children) {
+                      d.children = d._children;
+                      d._children = null;
+                    }
+                    drawMiniTree(svgG, root, "radial", w, h, true, labelStyle);
+                  }
+                : null,
+            );
+
           ng.append("circle")
-            .attr("r", (d) => (d.children || d._children ? 4 : 2.5))
-            .attr("fill", (d) =>
-              d.children || d._children ? "var(--primary)" : "#fff",
+            .attr("r", (d) => (d.children ? 5.5 : d._children ? 4 : 2.5))
+            .attr("fill", (d) => (d.children ? "var(--primary)" : "#fff"))
+            .attr("stroke", (d) =>
+              d.children ? "var(--primary-dk)" : "var(--primary)",
             )
-            .attr("stroke", "var(--primary)")
-            .attr("stroke-width", 1.5);
+            .attr("stroke-width", (d) => (d.children ? 2 : 1.5));
+
+          // Tip-aligned guide line (hidden by default)
+          ng.append("line")
+            .attr("class", "tree-tip-line")
+            .attr("x1", 0)
+            .attr("y1", 0)
+            .attr("x2", 0)
+            .attr("y2", 0)
+            .attr("stroke", "#94a3b8")
+            .attr("stroke-width", 1)
+            .attr("stroke-dasharray", "2,2")
+            .style("opacity", 0);
+
+          const labelX = (d) => {
+            if (labelStyle === "tip-aligned" && isLeaf(d)) return tipR - d.y;
+            return d.x < Math.PI === !d.children ? 8 : -8;
+          };
+          const labelAnchor = (d) => {
+            if (labelStyle === "tip-aligned" && isLeaf(d))
+              return d.x < Math.PI ? "start" : "end";
+            return d.x < Math.PI === !d.children ? "start" : "end";
+          };
+          const labelTransform = (d) => {
+            if (labelStyle === "tip-aligned" && isLeaf(d)) {
+              return `rotate(${-((d.x * 180) / Math.PI - 90)})`;
+            }
+            return d.x >= Math.PI ? "rotate(180)" : null;
+          };
+
           ng.append("text")
+            .attr("class", "tree-label")
             .attr("dy", "0.31em")
-            .attr("x", (d) => (d.x < Math.PI === !d.children ? 8 : -8))
-            .attr("text-anchor", (d) =>
-              d.x < Math.PI === !d.children ? "start" : "end",
-            )
-            .attr("transform", (d) => (d.x >= Math.PI ? "rotate(180)" : null))
+            .attr("x", labelX)
+            .attr("text-anchor", labelAnchor)
+            .attr("transform", labelTransform)
             .text((d) => d.data.name)
             .style("font-size", "10px")
             .style("fill", "var(--txt-mid)")
@@ -437,6 +444,7 @@
             .lower()
             .attr("stroke", "var(--bg)")
             .attr("stroke-width", 3);
+
           return ng;
         },
         (update) =>
@@ -446,18 +454,316 @@
           ),
         (exit) => exit.remove(),
       );
+
+    // Update circles
+    nodeJoin
+      .select("circle")
+      .attr("r", (d) => (d.children ? 5.5 : d._children ? 4 : 2.5))
+      .attr("fill", (d) => (d.children ? "var(--primary)" : "#fff"))
+      .attr("stroke", (d) =>
+        d.children ? "var(--primary-dk)" : "var(--primary)",
+      )
+      .attr("stroke-width", (d) => (d.children ? 2 : 1.5));
+
+    // Update tip lines
+    nodeJoin
+      .select("line.tree-tip-line")
+      .attr("x2", (d) =>
+        labelStyle === "tip-aligned" && isLeaf(d) ? tipR - d.y : 0,
+      )
+      .style("opacity", (d) =>
+        labelStyle === "tip-aligned" && isLeaf(d) ? 1 : 0,
+      );
+
+    // Update labels (both original and clone)
+    nodeJoin
+      .selectAll("text.tree-label")
+      .attr("x", (d) => {
+        if (labelStyle === "tip-aligned" && isLeaf(d)) return tipR - d.y;
+        return d.x < Math.PI === !d.children ? 8 : -8;
+      })
+      .attr("text-anchor", (d) => {
+        if (labelStyle === "tip-aligned" && isLeaf(d))
+          return d.x < Math.PI ? "start" : "end";
+        return d.x < Math.PI === !d.children ? "start" : "end";
+      })
+      .attr("transform", (d) => {
+        if (labelStyle === "tip-aligned" && isLeaf(d)) {
+          return `rotate(${-((d.x * 180) / Math.PI - 90)})`;
+        }
+        return d.x >= Math.PI ? "rotate(180)" : null;
+      })
+      .style("opacity", 1);
   }
 
-  function initTreeData(mode) {
-    const data = getHierarchy(mode);
-    treeRoot = d3.hierarchy(data);
-    let i = 0;
-    treeRoot.descendants().forEach((d) => {
-      d.id = i++;
+  function drawLinearTree(svgG, root, w, h, interactive) {
+    const treeLayout = d3.tree().size([w - 20, h - 30]);
+    treeLayout(root);
+    const nodes = root.descendants();
+    const links = root.links();
+    const linkGen = d3
+      .linkVertical()
+      .x((d) => d.x + 10)
+      .y((d) => d.y + 15);
+
+    svgG
+      .selectAll("path.tree-link")
+      .data(links, (d) => d.target.id)
+      .join(
+        (enter) =>
+          enter
+            .append("path")
+            .attr("class", "tree-link")
+            .attr("fill", "none")
+            .attr("stroke", "#cbd5e1")
+            .attr("stroke-width", 1)
+            .attr("stroke-opacity", 0.7)
+            .attr("d", linkGen),
+        (update) => update.attr("d", linkGen),
+        (exit) => exit.remove(),
+      );
+
+    svgG
+      .selectAll("g.tree-node")
+      .data(nodes, (d) => d.id)
+      .join(
+        (enter) => {
+          const ng = enter
+            .append("g")
+            .attr("class", "tree-node")
+            .attr("transform", (d) => `translate(${d.x + 10},${d.y + 15})`)
+            .on(
+              "click",
+              interactive
+                ? (event, d) => {
+                    if (d.children) {
+                      d._children = d.children;
+                      d.children = null;
+                    } else if (d._children) {
+                      d.children = d._children;
+                      d._children = null;
+                    }
+                    drawMiniTree(svgG, root, "linear", w, h, true);
+                  }
+                : null,
+            );
+          ng.append("circle")
+            .attr("r", (d) => (d.children ? 5.5 : d._children ? 4 : 2.5))
+            .attr("fill", (d) => (d.children ? "var(--primary)" : "#fff"))
+            .attr("stroke", (d) =>
+              d.children ? "var(--primary-dk)" : "var(--primary)",
+            )
+            .attr("stroke-width", (d) => (d.children ? 2 : 1.5));
+          ng.append("text")
+            .attr("dy", "0.31em")
+            .attr("x", 8)
+            .attr("text-anchor", "start")
+            .text((d) => d.data.name)
+            .style("font-size", "9px")
+            .style("fill", "var(--txt-mid)")
+            .clone(true)
+            .lower()
+            .attr("stroke", "var(--bg)")
+            .attr("stroke-width", 3);
+          return ng;
+        },
+        (update) =>
+          update.attr("transform", (d) => `translate(${d.x + 10},${d.y + 15})`),
+        (exit) => exit.remove(),
+      )
+      .select("circle")
+      .attr("r", (d) => (d.children ? 5.5 : d._children ? 4 : 2.5))
+      .attr("fill", (d) => (d.children ? "var(--primary)" : "#fff"))
+      .attr("stroke", (d) =>
+        d.children ? "var(--primary-dk)" : "var(--primary)",
+      )
+      .attr("stroke-width", (d) => (d.children ? 2 : 1.5));
+  }
+
+  function drawUnrootedTree(svgG, root, w, h, interactive) {
+    const nodes = root.descendants();
+    const links = root.links();
+    const margin = 20;
+    const simW = w - margin * 2;
+    const simH = h - margin * 2;
+
+    nodes.forEach((d) => {
+      if (d._px === undefined) {
+        d._px = (Math.random() - 0.5) * simW * 0.5;
+        d._py = (Math.random() - 0.5) * simH * 0.5;
+      }
+      d.x = d._px;
+      d.y = d._py;
     });
-    // Determine file depth dynamically: it's the first level whose children are type-aggregates (have value, no children)
+
+    const simulation = d3
+      .forceSimulation(nodes)
+      .force(
+        "link",
+        d3
+          .forceLink(links)
+          .id((d) => d.id)
+          .distance(30),
+      )
+      .force("charge", d3.forceManyBody().strength(-100))
+      .force("center", d3.forceCenter(0, 0))
+      .force("collide", d3.forceCollide().radius(12))
+      .stop();
+
+    for (let i = 0; i < 150; i++) simulation.tick();
+
+    nodes.forEach((d) => {
+      d._px = d.x;
+      d._py = d.y;
+    });
+
+    const xEx = d3.extent(nodes, (d) => d.x);
+    const yEx = d3.extent(nodes, (d) => d.y);
+    const scale = Math.min(
+      simW / Math.max(xEx[1] - xEx[0], 1),
+      simH / Math.max(yEx[1] - yEx[0], 1),
+      1,
+    );
+    const cx = (xEx[0] + xEx[1]) / 2;
+    const cy = (yEx[0] + yEx[1]) / 2;
+
+    const line = (s, t) => {
+      const sx = (s.x - cx) * scale;
+      const sy = (s.y - cy) * scale;
+      const tx = (t.x - cx) * scale;
+      const ty = (t.y - cy) * scale;
+      return `M${sx},${sy}L${tx},${ty}`;
+    };
+
+    svgG
+      .selectAll("path.tree-link")
+      .data(links, (d) => d.target.id)
+      .join(
+        (enter) =>
+          enter
+            .append("path")
+            .attr("class", "tree-link")
+            .attr("fill", "none")
+            .attr("stroke", "#cbd5e1")
+            .attr("stroke-width", 1)
+            .attr("stroke-opacity", 0.7)
+            .attr("d", (d) => line(d.source, d.target)),
+        (update) => update.attr("d", (d) => line(d.source, d.target)),
+        (exit) => exit.remove(),
+      );
+
+    const nodeTransform = (d) => {
+      const x = (d.x - cx) * scale;
+      const y = (d.y - cy) * scale;
+      return `translate(${x},${y})`;
+    };
+
+    svgG
+      .selectAll("g.tree-node")
+      .data(nodes, (d) => d.id)
+      .join(
+        (enter) => {
+          const ng = enter
+            .append("g")
+            .attr("class", "tree-node")
+            .attr("transform", nodeTransform)
+            .on(
+              "click",
+              interactive
+                ? (event, d) => {
+                    if (d.children) {
+                      d._children = d.children;
+                      d.children = null;
+                    } else if (d._children) {
+                      d.children = d._children;
+                      d._children = null;
+                    }
+                    drawMiniTree(svgG, root, "unrooted", w, h, true);
+                  }
+                : null,
+            );
+          ng.append("circle")
+            .attr("r", (d) => (d.children ? 5.5 : d._children ? 4 : 2.5))
+            .attr("fill", (d) => (d.children ? "var(--primary)" : "#fff"))
+            .attr("stroke", (d) =>
+              d.children ? "var(--primary-dk)" : "var(--primary)",
+            )
+            .attr("stroke-width", (d) => (d.children ? 2 : 1.5));
+          ng.append("text")
+            .attr("dy", "0.31em")
+            .attr("x", 8)
+            .attr("text-anchor", "start")
+            .text((d) => d.data.name)
+            .style("font-size", "9px")
+            .style("fill", "var(--txt-mid)")
+            .clone(true)
+            .lower()
+            .attr("stroke", "var(--bg)")
+            .attr("stroke-width", 3);
+          return ng;
+        },
+        (update) => update.attr("transform", nodeTransform),
+        (exit) => exit.remove(),
+      )
+      .select("circle")
+      .attr("r", (d) => (d.children ? 5.5 : d._children ? 4 : 2.5))
+      .attr("fill", (d) => (d.children ? "var(--primary)" : "#fff"))
+      .attr("stroke", (d) =>
+        d.children ? "var(--primary-dk)" : "var(--primary)",
+      )
+      .attr("stroke-width", (d) => (d.children ? 2 : 1.5));
+  }
+
+  function drawMiniTree(
+    svgG,
+    root,
+    layoutType,
+    w,
+    h,
+    interactive = true,
+    labelStyle = "compact",
+  ) {
+    if (!svgG || !root) return;
+    if (layoutType === "linear") drawLinearTree(svgG, root, w, h, interactive);
+    else if (layoutType === "unrooted")
+      drawUnrootedTree(svgG, root, w, h, interactive);
+    else drawRadialTree(svgG, root, w, h, interactive, labelStyle);
+  }
+
+  function getTreeLayout() {
+    return $("tree-layout")?.value || "radial";
+  }
+
+  function getTreeLabelStyle() {
+    return $("tree-label-style")?.value || "compact";
+  }
+
+  function showTreeDetail(childData, title) {
+    const container = $("tree-container");
+    if (!container) return;
+    const layoutType = getTreeLayout();
+
+    const overlay = document.createElement("div");
+    overlay.className = "tree-detail-overlay";
+    overlay.innerHTML = `
+      <div class="tree-detail-header">
+        <span class="tree-detail-title"></span>
+        <button class="tree-detail-close" type="button">&times;</button>
+      </div>
+      <div class="tree-detail-body"></div>
+    `;
+    overlay.querySelector(".tree-detail-title").textContent = title;
+    const body = overlay.querySelector(".tree-detail-body");
+    container.appendChild(overlay);
+
+    const hRoot = d3.hierarchy({ ...childData });
+    let idCounter = 0;
+    hRoot.descendants().forEach((d) => {
+      d.id = idCounter++;
+    });
+
     let fileDepth = 3;
-    treeRoot.descendants().forEach((d) => {
+    hRoot.descendants().forEach((d) => {
       if (
         d.children &&
         d.children.some((c) => c.data.value !== undefined && !c.children)
@@ -465,38 +771,177 @@
         fileDepth = Math.min(fileDepth, d.depth);
       }
     });
-    treeRoot.descendants().forEach((d) => {
+    hRoot.descendants().forEach((d) => {
       if (d.depth >= fileDepth && d.children) {
         d._children = d.children;
         d.children = null;
       }
     });
+
+    const w = body.clientWidth || 800;
+    const h = body.clientHeight || 600;
+    const vb = layoutType === "linear" ? [0, 0, w, h] : [-w / 2, -h / 2, w, h];
+
+    const svg = d3
+      .select(body)
+      .append("svg")
+      .attr("width", w)
+      .attr("height", h)
+      .attr("viewBox", vb)
+      .style("font", "11px Inter, system-ui, sans-serif");
+
+    const g = svg.append("g");
+    svg.call(
+      d3
+        .zoom()
+        .scaleExtent([0.05, 4])
+        .on("zoom", (e) => {
+          g.attr("transform", e.transform);
+        }),
+    );
+
+    drawMiniTree(g, hRoot, layoutType, w, h, true, getTreeLabelStyle());
+
+    overlay
+      .querySelector(".tree-detail-close")
+      .addEventListener("click", () => overlay.remove());
   }
 
   function renderTree() {
+    const container = $("tree-container");
+    if (!container) return;
     const mode = $("tree-mode")?.value || "project";
-    initTreeData(mode);
-    // Count maximum possible leaves (fully expanded) for radius sizing
-    const fullRoot = d3.hierarchy(getHierarchy(mode));
-    const totalLeaves = fullRoot.leaves().length;
-    setupTreeSvg(totalLeaves);
-    drawTree();
+    const data = getHierarchy(mode);
+    const layoutType = getTreeLayout();
+    const labelStyle = getTreeLabelStyle();
+
+    container.innerHTML = "";
+    const grid = document.createElement("div");
+    grid.className = "mini-tree-grid";
+    container.appendChild(grid);
+    miniTreeRegistry = [];
+
+    const children = data.children || [data];
+    children.forEach((childData, idx) => {
+      const hRoot = d3.hierarchy({ ...childData });
+      let idCounter = idx * 10000;
+      hRoot.descendants().forEach((d) => {
+        d.id = idCounter++;
+      });
+
+      let fileDepth = 3;
+      hRoot.descendants().forEach((d) => {
+        if (
+          d.children &&
+          d.children.some((c) => c.data.value !== undefined && !c.children)
+        ) {
+          fileDepth = Math.min(fileDepth, d.depth);
+        }
+      });
+      hRoot.descendants().forEach((d) => {
+        if (d.depth >= fileDepth && d.children) {
+          d._children = d.children;
+          d.children = null;
+        }
+      });
+
+      const card = document.createElement("div");
+      card.className = "mini-tree";
+
+      const title = document.createElement("div");
+      title.className = "mini-tree-title";
+      title.textContent = childData.name;
+      card.appendChild(title);
+
+      const svgWrap = document.createElement("div");
+      svgWrap.className = "mini-tree-svg";
+      card.appendChild(svgWrap);
+      grid.appendChild(card);
+
+      card.addEventListener("click", () => {
+        showTreeDetail(childData, childData.name);
+      });
+
+      const vb =
+        layoutType === "linear"
+          ? [0, 0, MINI_TREE_SIZE, MINI_TREE_SIZE]
+          : [
+              -MINI_TREE_SIZE / 2,
+              -MINI_TREE_SIZE / 2,
+              MINI_TREE_SIZE,
+              MINI_TREE_SIZE,
+            ];
+
+      const svg = d3
+        .select(svgWrap)
+        .append("svg")
+        .attr("width", MINI_TREE_SIZE)
+        .attr("height", MINI_TREE_SIZE)
+        .attr("viewBox", vb)
+        .style("font", "10px Inter, system-ui, sans-serif");
+
+      const g = svg.append("g");
+      svg.call(
+        d3
+          .zoom()
+          .scaleExtent([0.1, 4])
+          .on("zoom", (e) => {
+            g.attr("transform", e.transform);
+          }),
+      );
+
+      miniTreeRegistry.push({
+        svgG: g,
+        root: hRoot,
+        layoutType,
+        width: MINI_TREE_SIZE,
+        height: MINI_TREE_SIZE,
+        labelStyle,
+      });
+      drawMiniTree(
+        g,
+        hRoot,
+        layoutType,
+        MINI_TREE_SIZE,
+        MINI_TREE_SIZE,
+        false,
+        labelStyle,
+      );
+    });
   }
 
-  function expandAll(d) {
-    if (d._children) {
-      d.children = d._children;
-      d._children = null;
-    }
-    if (d.children) d.children.forEach(expandAll);
+  function expandAllTrees() {
+    miniTreeRegistry.forEach(({ root }) => {
+      function expand(d) {
+        if (d._children) {
+          d.children = d._children;
+          d._children = null;
+        }
+        if (d.children) d.children.forEach(expand);
+      }
+      expand(root);
+    });
+    miniTreeRegistry.forEach(
+      ({ svgG, root, layoutType, width, height, labelStyle }) =>
+        drawMiniTree(svgG, root, layoutType, width, height, false, labelStyle),
+    );
   }
 
-  function collapseAll(d) {
-    if (d.children) {
-      d._children = d.children;
-      d.children = null;
-    }
-    if (d._children) d._children.forEach(collapseAll);
+  function collapseAllTrees() {
+    miniTreeRegistry.forEach(({ root }) => {
+      function collapse(d) {
+        if (d.children) {
+          d._children = d.children;
+          d.children = null;
+        }
+        if (d._children) d._children.forEach(collapse);
+      }
+      collapse(root);
+    });
+    miniTreeRegistry.forEach(
+      ({ svgG, root, layoutType, width, height, labelStyle }) =>
+        drawMiniTree(svgG, root, layoutType, width, height, false, labelStyle),
+    );
   }
 
   /* ---------- Event wiring ---------- */
@@ -532,21 +977,21 @@
       resetCache();
       renderTree();
     });
+    $("tree-layout")?.addEventListener("change", () => {
+      renderTree();
+    });
+    $("tree-label-style")?.addEventListener("change", () => {
+      renderTree();
+    });
     $("tree-reset")?.addEventListener("click", () => {
       resetCache();
       renderTree();
     });
     $("tree-expand")?.addEventListener("click", () => {
-      if (treeRoot) {
-        expandAll(treeRoot);
-        drawTree();
-      }
+      expandAllTrees();
     });
     $("tree-collapse")?.addEventListener("click", () => {
-      if (treeRoot) {
-        collapseAll(treeRoot);
-        drawTree();
-      }
+      collapseAllTrees();
     });
 
     // Hook into existing tab buttons
