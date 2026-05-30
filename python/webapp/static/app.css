@@ -1445,16 +1445,18 @@ input[type="range"]#node-label-size {
 
 .cp-tooltip {
   position: absolute;
-  background: rgba(15, 23, 42, 0.92);
+  background: rgba(15, 23, 42, 0.95);
   color: #e2e8f0;
-  padding: 4px 8px;
+  padding: 5px 10px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 500;
   pointer-events: none;
-  z-index: 20;
+  z-index: 100;
   visibility: hidden;
   border: 1px solid var(--border);
   white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 #sunburst-container .sunburst-viz {

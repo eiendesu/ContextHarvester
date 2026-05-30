@@ -492,6 +492,7 @@
 
     const w = container.clientWidth || 800;
     const h = container.clientHeight || 600;
+    container.style.position = "relative";
     container.innerHTML = "";
 
     // Header breadcrumb
@@ -592,10 +593,18 @@
       return candidates[0] || null;
     }
 
-    // Click a livello SVG — passa attraverso i cerchi con pointer-events:none
-    svg.on("click", (event) => {
-      event.stopPropagation();
-      const [px, py] = d3.pointer(event);
+    // Helper: coordinate mouse → coordinate SVG viewBox
+    function svgCoordsFromMouse(event) {
+      const svgEl = svg.node();
+      const rect = svgEl.getBoundingClientRect();
+      const px = ((event.clientX - rect.left) / rect.width) * w - w / 2;
+      const py = ((event.clientY - rect.top) / rect.height) * h - h / 2;
+      return [px, py];
+    }
+
+    // Click a livello container — passa attraverso i cerchi con pointer-events:none
+    container.addEventListener("click", (event) => {
+      const [px, py] = svgCoordsFromMouse(event);
       const d = nodeAtPoint(px, py);
       if (!d) return;
       console.log(
@@ -623,22 +632,21 @@
       }
     });
 
-    // Tooltip a livello SVG
-    svg.on("mousemove", (event) => {
-      const [px, py] = d3.pointer(event);
+    // Tooltip a livello container
+    container.addEventListener("mousemove", (event) => {
+      const [px, py] = svgCoordsFromMouse(event);
       const d = nodeAtPoint(px, py);
       if (d) {
         tooltipDiv.textContent = `${d.data.name} — ${d.children ? d.children.length + " figli" : "foglia"}`;
         tooltipDiv.style.visibility = "visible";
-        const rect = container.getBoundingClientRect();
-        tooltipDiv.style.left = event.clientX - rect.left + 10 + "px";
-        tooltipDiv.style.top = event.clientY - rect.top - 24 + "px";
+        tooltipDiv.style.left = event.offsetX + 10 + "px";
+        tooltipDiv.style.top = event.offsetY - 24 + "px";
       } else {
         tooltipDiv.style.visibility = "hidden";
       }
     });
 
-    svg.on("mouseleave", () => {
+    container.addEventListener("mouseleave", () => {
       tooltipDiv.style.visibility = "hidden";
     });
 
