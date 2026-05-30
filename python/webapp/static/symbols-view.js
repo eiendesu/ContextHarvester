@@ -16,7 +16,7 @@
   }
 
   async function fetchCatalog() {
-    const IS_MOCK = new URLSearchParams(location.search).has("mock");
+    const IS_MOCK = new URLSearchParams(location.search).get("mock") === "1";
     if (IS_MOCK) {
       const res = await fetch("/static/mock/symbols.json");
       return res.json();

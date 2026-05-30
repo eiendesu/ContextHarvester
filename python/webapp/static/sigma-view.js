@@ -16,7 +16,7 @@
   let dragSession = null;
   let suppressNodeClick = false;
 
-  const IS_MOCK = new URLSearchParams(location.search).has("mock");
+  const IS_MOCK = new URLSearchParams(location.search).get("mock") === "1";
   const MOCK_MAP = {
     "/api/graph/file": "/static/mock/graph-file.json",
     "/api/graph/detail": "/static/mock/graph-detail.json",

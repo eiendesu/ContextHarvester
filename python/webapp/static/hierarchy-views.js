@@ -1,7 +1,7 @@
 /* Context Harvester — Hierarchy views: Sunburst + Radial Tree */
 (function () {
   const $ = (id) => document.getElementById(id);
-  const IS_MOCK = new URLSearchParams(location.search).has("mock");
+  const IS_MOCK = new URLSearchParams(location.search).get("mock") === "1";
 
   async function fetchJson(path, mockPath) {
     const url = IS_MOCK && mockPath ? mockPath : path;
