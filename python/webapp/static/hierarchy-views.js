@@ -553,12 +553,26 @@
       })
       .on("click", (event, d) => {
         event.stopPropagation();
+        console.log(
+          "[CirclePack] click",
+          d.data.name,
+          "depth:",
+          d.depth,
+          "hasChildren:",
+          !!d.children,
+          "isRoot:",
+          d === root,
+        );
         if (d === root && circlePackFocusNode) {
+          console.log("[CirclePack] → going up");
           circlePackFocusNode = circlePackFocusNode.parent || null;
           renderCirclePack();
         } else if (d.children) {
+          console.log("[CirclePack] → zoom in");
           circlePackFocusNode = d;
           renderCirclePack();
+        } else {
+          console.log("[CirclePack] → leaf, no action");
         }
       })
       .on("mouseover", (event, d) => {
