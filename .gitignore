@@ -154,3 +154,9 @@ python/config_temp*.json
 media/build-info.json
 tools/**/bin/
 tools/**/obj/
+
+# Vendor libs (downloaded on demand)
+python/webapp/static/vendor/lodash.min.js
+python/webapp/static/vendor/phylotree-debug.js
+python/webapp/static/vendor/phylotree.min.js
+python/webapp/static/vendor/underscore-min.js
