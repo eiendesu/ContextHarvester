@@ -1394,6 +1394,55 @@ input[type="range"]#node-label-size {
   background: var(--bg);
 }
 
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  z-index: 10;
+  transition: opacity 0.2s;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.circlepack-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid var(--border);
+  z-index: 5;
+  font-size: 12px;
+  color: var(--txt);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.circlepack-header .cp-breadcrumb {
+  color: var(--primary);
+  font-weight: 500;
+}
+
 #sunburst-container .sunburst-viz {
   font-family: var(--font);
 }
