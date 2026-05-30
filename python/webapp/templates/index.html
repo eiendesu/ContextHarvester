@@ -26,17 +26,21 @@
           <button type="button" class="tab active" data-tab="sigma">
             Grafo
           </button>
-          <button type="button" class="tab" data-tab="symbols">Simboli</button>
-          <button type="button" class="tab" data-tab="impact">Impact</button>
-          <button type="button" class="tab" data-tab="analysis">Analisi</button>
-          <button type="button" class="tab" data-tab="functions">
-            Funzionalità
-          </button>
           <button type="button" class="tab" data-tab="sunburst">
             Sunburst
           </button>
           <button type="button" class="tab" data-tab="tree">
             Tree of Life
+          </button>
+          <button type="button" class="tab" data-tab="sankey">Sankey</button>
+          <button type="button" class="tab" data-tab="circlepack">
+            Circle Pack
+          </button>
+          <button type="button" class="tab" data-tab="symbols">Simboli</button>
+          <button type="button" class="tab" data-tab="impact">Impact</button>
+          <button type="button" class="tab" data-tab="analysis">Analisi</button>
+          <button type="button" class="tab" data-tab="functions">
+            Funzionalità
           </button>
         </nav>
       </div>
@@ -992,6 +996,75 @@
             >
               Reset view
             </button>
+            <div
+              style="
+                margin-top: 10px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+              "
+            >
+              <input
+                type="checkbox"
+                id="sunburst-size-auto"
+                checked
+                style="cursor: pointer"
+              />
+              <label
+                for="sunburst-size-auto"
+                style="font-size: 12px; cursor: pointer"
+                >Grandezza: 100%</label
+              >
+            </div>
+            <input
+              type="text"
+              id="sunburst-size-input"
+              class="sb-input"
+              placeholder="es. 800 o 50%"
+              style="margin-top: 6px; display: none"
+            />
+          </div>
+          <div
+            class="sb-section"
+            style="
+              flex: 1;
+              min-height: 0;
+              display: flex;
+              flex-direction: column;
+            "
+          >
+            <div class="sb-section-title">☰ NODI</div>
+            <input
+              type="text"
+              id="sunburst-node-search"
+              class="sb-input"
+              placeholder="Cerca nodo…"
+              style="font-size: 12px; margin-bottom: 6px"
+            />
+            <label
+              class="sb-field-label"
+              style="font-size: 11px; margin-bottom: 2px"
+              >Connessioni (figli)</label
+            >
+            <div style="display: flex; gap: 4px; margin-bottom: 6px">
+              <input
+                type="number"
+                id="sunburst-conn-min"
+                class="sb-input"
+                placeholder="Min"
+                style="font-size: 11px; flex: 1"
+                min="0"
+              />
+              <input
+                type="number"
+                id="sunburst-conn-max"
+                class="sb-input"
+                placeholder="Max"
+                style="font-size: 11px; flex: 1"
+                min="0"
+              />
+            </div>
+            <div id="sunburst-node-list" class="node-list-scroll"></div>
           </div>
           <div class="sb-section">
             <p class="muted small" style="margin: 0">
@@ -1072,6 +1145,87 @@
           <div id="tree-container" style="width: 100%; height: 100%"></div>
         </div>
       </section>
+
+      <!-- ── PANEL: Sankey ── -->
+      <section id="panel-sankey" class="panel">
+        <aside class="panel-sidebar">
+          <div class="sb-section">
+            <div class="sb-section-title">⇢ SANKEY</div>
+            <label class="sb-field-label">Modalità gerarchica</label>
+            <select id="sankey-mode" class="sb-input">
+              <option value="project">Project → Folder → File</option>
+              <option value="project-detail">
+                Project → Folder → File → Details
+              </option>
+              <option value="community">
+                Community → Project → Folder → File
+              </option>
+              <option value="community-detail">
+                Community → Project → Folder → File → Details
+              </option>
+            </select>
+            <button
+              type="button"
+              id="sankey-reset"
+              class="sb-btn sb-btn-primary sb-btn-full"
+              style="margin-top: 6px"
+            >
+              Reset view
+            </button>
+          </div>
+          <div class="sb-section">
+            <p class="muted small" style="margin: 0">
+              Diagramma di flusso Sankey. Mostra le relazioni gerarchiche come
+              flussi tra i livelli.
+            </p>
+          </div>
+        </aside>
+        <div class="panel-main" style="padding: 0; overflow: hidden">
+          <div id="sankey-container" style="width: 100%; height: 100%"></div>
+        </div>
+      </section>
+
+      <!-- ── PANEL: Circle Pack ── -->
+      <section id="panel-circlepack" class="panel">
+        <aside class="panel-sidebar">
+          <div class="sb-section">
+            <div class="sb-section-title">◉ CIRCLE PACK</div>
+            <label class="sb-field-label">Modalità gerarchica</label>
+            <select id="circlepack-mode" class="sb-input">
+              <option value="project">Project → Folder → File</option>
+              <option value="project-detail">
+                Project → Folder → File → Details
+              </option>
+              <option value="community">
+                Community → Project → Folder → File
+              </option>
+              <option value="community-detail">
+                Community → Project → Folder → File → Details
+              </option>
+            </select>
+            <button
+              type="button"
+              id="circlepack-reset"
+              class="sb-btn sb-btn-primary sb-btn-full"
+              style="margin-top: 6px"
+            >
+              Reset view
+            </button>
+          </div>
+          <div class="sb-section">
+            <p class="muted small" style="margin: 0">
+              Gerarchia con cerchi imballati (Circle Packing). Clicca per
+              entrare/uscire dai livelli.
+            </p>
+          </div>
+        </aside>
+        <div class="panel-main" style="padding: 0; overflow: hidden">
+          <div
+            id="circlepack-container"
+            style="width: 100%; height: 100%"
+          ></div>
+        </div>
+      </section>
     </main>
 
     <script src="/vendor/vis-network/vis-network.min.js"></script>
@@ -1079,7 +1233,8 @@
     <script src="/static/progress.js"></script>
     <script src="/static/vendor/d3.v7.min.js?v=2"></script>
     <script src="/static/vendor/sunburst-chart.min.js?v=2"></script>
-    <script src="/static/hierarchy-views.js?v=29"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="/static/hierarchy-views.js?v=32"></script>
     <script src="/static/app.js"></script>
     <script src="/static/symbols-view.js"></script>
     <script src="/static/force-graph-view.js?v=35"></script>

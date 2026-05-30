@@ -64,6 +64,7 @@
       if (tab === "functions") loadFunctions();
       if (tab === "symbols" && window.chSymbolsView?.load)
         window.chSymbolsView.load(false);
+      if (window.onTabActive) window.onTabActive(tab);
     });
   });
 
