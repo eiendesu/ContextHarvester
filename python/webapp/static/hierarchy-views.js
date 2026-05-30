@@ -513,18 +513,18 @@
       .attr("width", w)
       .attr("height", h)
       .attr("viewBox", [-w / 2, -h / 2, w, h])
-      .style("font", "10px Inter, system-ui, sans-serif")
-      .style("cursor", "pointer");
+      .style("font", "10px Inter, system-ui, sans-serif");
 
     const g = svg.append("g");
-    svg.call(
-      d3
-        .zoom()
-        .scaleExtent([0.5, 8])
-        .on("zoom", (e) => {
-          g.attr("transform", e.transform);
-        }),
-    );
+
+    // Zoom wheel semplice (senza overlay D3 che blocca click)
+    let cpScale = 1;
+    svg.on("wheel", (event) => {
+      event.preventDefault();
+      const factor = event.deltaY > 0 ? 0.9 : 1.1;
+      cpScale = Math.max(0.5, Math.min(8, cpScale * factor));
+      g.attr("transform", `scale(${cpScale})`);
+    });
 
     const root = d3
       .hierarchy(visibleRootData)
@@ -546,11 +546,21 @@
       .selectAll("g")
       .data(root.descendants())
       .join("g")
-      .attr("transform", (d) => `translate(${d.x - w / 2},${d.y - h / 2})`)
+      .attr("transform", (d) => `translate(${d.x - w / 2},${d.y - h / 2})`);
+
+    node
+      .append("circle")
+      .attr("r", (d) => d.r)
+      .attr("fill", (d) =>
+        d.children ? "rgba(15, 23, 42, 0.6)" : d.data.color || "var(--primary)",
+      )
+      .attr("stroke", (d) => (d.depth === 0 ? "none" : "var(--border)"))
+      .attr("stroke-width", (d) => (d.depth === 0 ? 0 : 1))
       .style("cursor", (d) => {
         if (d === root && circlePackFocusNode) return "pointer";
         return d.children ? "pointer" : "default";
       })
+      .style("pointer-events", "all")
       .on("click", (event, d) => {
         event.stopPropagation();
         console.log(
@@ -567,15 +577,15 @@
           console.log("[CirclePack] → going up");
           circlePackFocusNode = circlePackFocusNode.parent || null;
           renderCirclePack();
-        } else if (d.children) {
+        } else if (d.children && d !== root) {
           console.log("[CirclePack] → zoom in");
           circlePackFocusNode = d;
           renderCirclePack();
         } else {
-          console.log("[CirclePack] → leaf, no action");
+          console.log("[CirclePack] → leaf or root, no action");
         }
       })
-      .on("mouseover", (event, d) => {
+      .on("mouseenter", (event, d) => {
         tooltipDiv.textContent = `${d.data.name} — ${d.children ? d.children.length + " figli" : "foglia"}`;
         tooltipDiv.style.visibility = "visible";
       })
@@ -584,18 +594,9 @@
         tooltipDiv.style.left = event.clientX - rect.left + 10 + "px";
         tooltipDiv.style.top = event.clientY - rect.top - 24 + "px";
       })
-      .on("mouseout", () => {
+      .on("mouseleave", () => {
         tooltipDiv.style.visibility = "hidden";
       });
-
-    node
-      .append("circle")
-      .attr("r", (d) => d.r)
-      .attr("fill", (d) =>
-        d.children ? "rgba(15, 23, 42, 0.6)" : d.data.color || "var(--primary)",
-      )
-      .attr("stroke", (d) => (d.depth === 0 ? "none" : "var(--border)"))
-      .attr("stroke-width", (d) => (d.depth === 0 ? 0 : 1));
 
     node
       .filter((d) => d.r > 14 && d.depth < 3)
