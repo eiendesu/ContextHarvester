@@ -467,120 +467,6 @@
     }
   }
 
-  /* ---------- Sankey ---------- */
-  let sankeyChart = null;
-  let sankeyObs = null;
-
-  function renderSankey() {
-    const container = $("sankey-container");
-    if (!container) return;
-    const loader = showLoading(container);
-    const mode = $("sankey-mode")?.value || "project";
-    const data = getHierarchy(mode);
-
-    requestAnimationFrame(() => {
-      if (typeof echarts === "undefined") {
-        container.innerHTML =
-          '<p class="muted small" style="padding:20px">Libreria ECharts non caricata. Verifica la connessione a internet.</p>';
-        return;
-      }
-
-      const nodes = [];
-      const links = [];
-      const seen = new Set();
-
-      function addNode(fullName, depth) {
-        if (seen.has(fullName)) return;
-        seen.add(fullName);
-        nodes.push({
-          name: fullName,
-          depth,
-          itemStyle: { color: getColorForDepth(depth) },
-        });
-      }
-
-      function walk(d, depth, path) {
-        const fullName = path ? path + " > " + d.name : d.name;
-        addNode(fullName, depth);
-        if (d.children) {
-          d.children.forEach((c) => {
-            const childFullName = fullName + " > " + c.name;
-            addNode(childFullName, depth + 1);
-            links.push({
-              source: fullName,
-              target: childFullName,
-              value: c.value || 1,
-            });
-            walk(c, depth + 1, fullName);
-          });
-        }
-      }
-      walk(data, 0, "");
-
-      if (sankeyChart) {
-        sankeyChart.dispose();
-        sankeyChart = null;
-      }
-      container.innerHTML = "";
-      sankeyChart = echarts.init(container, "dark");
-      sankeyChart.setOption({
-        backgroundColor: "transparent",
-        tooltip: {
-          trigger: "item",
-          triggerOn: "mousemove",
-          formatter: (params) => {
-            if (params.dataType === "node") {
-              const parts = params.name.split(" > ");
-              return `<strong>${parts[parts.length - 1]}</strong>`;
-            }
-            return `${params.data.source.split(" > ").pop()} → ${params.data.target.split(" > ").pop()}`;
-          },
-        },
-        series: [
-          {
-            type: "sankey",
-            data: nodes,
-            links: links,
-            nodeAlign: "right",
-            emphasis: { focus: "adjacency" },
-            lineStyle: { color: "gradient", curveness: 0.5, opacity: 0.3 },
-            label: {
-              color: "#e2e8f0",
-              fontSize: 10,
-              fontFamily: "Inter, system-ui, sans-serif",
-              formatter: (params) => {
-                const parts = params.name.split(" > ");
-                return parts[parts.length - 1];
-              },
-            },
-            itemStyle: { borderWidth: 0 },
-            layoutIterations: 64,
-          },
-        ],
-      });
-
-      if (sankeyObs) sankeyObs.disconnect();
-      sankeyObs = new ResizeObserver(() => {
-        if (sankeyChart) sankeyChart.resize();
-      });
-      sankeyObs.observe(container);
-      hideLoading(loader);
-    });
-  }
-
-  function getColorForDepth(depth) {
-    const colors = [
-      "#0ea5e9",
-      "#22c55e",
-      "#f59e0b",
-      "#ef4444",
-      "#8b5cf6",
-      "#ec4899",
-      "#14b8a6",
-    ];
-    return colors[depth % colors.length];
-  }
-
   /* ---------- Circle Pack ---------- */
   let circlePackObs = null;
   let circlePackFocusNode = null; // D3 hierarchy node (not .data)
@@ -1330,7 +1216,6 @@
   function onTabActive(tabName) {
     if (tabName === "sunburst") renderSunburst();
     if (tabName === "tree") renderTree();
-    if (tabName === "sankey") renderSankey();
     if (tabName === "circlepack") renderCirclePack();
   }
 
@@ -1375,15 +1260,6 @@
     });
     $("sunburst-conn-max")?.addEventListener("input", () => {
       filterAndRenderSunburstNodeList();
-    });
-
-    $("sankey-mode")?.addEventListener("change", () => {
-      resetCache();
-      renderSankey();
-    });
-    $("sankey-reset")?.addEventListener("click", () => {
-      resetCache();
-      renderSankey();
     });
 
     $("circlepack-mode")?.addEventListener("change", () => {
